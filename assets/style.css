@@ -253,3 +253,18 @@ body::after{background:radial-gradient(circle,var(--al),transparent 70%);bottom:
 .frac sub{padding:0 2px}
 .confetti-canvas{position:fixed;inset:0;pointer-events:none;z-index:60}
 [hidden]{display:none!important}
+
+/* ============ 单元记忆锚点（badge / hook / boss标记） ============ */
+.u-badge{display:inline-block;background:linear-gradient(135deg,#FFF3D6,#FFE3A8);color:#9A6B00;border-radius:10px;
+  padding:3px 9px;font-size:11px;font-weight:800;margin-top:7px;animation:riseIn .4s both}
+.u-hook{font-size:11px;color:var(--ad);background:var(--al);border-radius:10px;padding:5px 9px;margin-top:6px;line-height:1.5;animation:riseIn .5s both}
+.u-boss{display:inline-block;font-size:11px;color:#7A4A00;background:#FFF0C2;border:1px dashed #F0B400;border-radius:10px;padding:3px 8px;margin-top:6px;font-weight:800}
+.u-lock-hint{font-size:11px;color:var(--ad);margin-top:6px;opacity:.92}
+
+/* Boss 徽章结算 */
+.r-boss{margin:10px auto 0;max-width:268px;background:linear-gradient(135deg,#FFF3D6,#FFDE9E);color:#7A4A00;
+  border-radius:14px;padding:11px 12px;font-weight:800;font-size:14px;line-height:1.5;box-shadow:0 6px 16px rgba(245,166,35,.3);animation:comboPop .6s}
+.r-boss.miss{background:var(--al);color:var(--ad);box-shadow:none}
+
+/* 判断题型两个大按钮 */
+.quiz-opt[data-o="对"],.quiz-opt[data-o="错"]{font-size:16px;font-weight:800}
