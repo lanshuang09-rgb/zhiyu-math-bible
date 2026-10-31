@@ -2,7 +2,7 @@ window.GRADE_DATA = window.GRADE_DATA || {};
 window.GRADE_DATA[6] = {
   grade:6, title:"六年级 · 苏教版",
   units:[
-    { id:"6上-1", sem:"上", title:"第一单元 · 长方体和正方体", free:true,
+    { id:"6上-1", sem:"上", title:"第一单元 · 长方体和正方体", icon:"📦", free:true,
       mindmap:"长方体和正方体\n· 长方体：6个面、12条棱、8个顶点；相对面完全相同\n· 正方体是特殊的长方体（12条棱都相等）\n· 表面积 = 各面面积之和\n· 体积：长方体=长×宽×高；正方体=棱长³；1m³=1000dm³",
       cards:[
         {q:"长方体有几条棱？", a:"12条，可分成长、宽、高各4条。"},
@@ -32,9 +32,9 @@ window.GRADE_DATA[6] = {
         {q:"1m³ =（ ）dm³。", type:"blank", key:"1000", a:"相邻体积进率1000。"}
       ]
     },
-    { id:"6上-2", sem:"上", title:"第二单元 · 分数乘法", free:false },
-    { id:"6上-3", sem:"上", title:"第三单元 · 分数除法", free:false },
-    { id:"6下-1", sem:"下", title:"第一单元 · 扇形统计图", free:false,
+    { id:"6上-2", sem:"上", title:"第二单元 · 分数乘法", icon:"🍕", free:false },
+    { id:"6上-3", sem:"上", title:"第三单元 · 分数除法", icon:"🍰", free:false },
+    { id:"6下-1", sem:"下", title:"第一单元 · 扇形统计图", icon:"🥧", free:false,
       mindmap:"扇形统计图\n· 用整个圆表示总数（单位『1』），扇形大小表示各部分占比\n· 能清楚看出各部分与整体的关系（占比）\n· 各部分百分比之和 = 100%\n· 看出『谁最多/最少』，但看不出具体数量（需已知总数）",
       cards:[
         {q:"扇形统计图看什么？", a:"看各部分占总数的百分比，谁占的大扇区就大。"},
@@ -64,7 +64,7 @@ window.GRADE_DATA[6] = {
         {q:"下面最适合看『各部分占比』的是？", type:"choice", options:["条形图","扇形图","折线图"], key:"扇形图", a:"扇形图专看占比。"}
       ]
     },
-    { id:"6下-2", sem:"下", title:"第二单元 · 圆柱和圆锥", free:false },
-    { id:"6下-3", sem:"下", title:"第三单元 · 解决问题的策略", free:false }
+    { id:"6下-2", sem:"下", title:"第二单元 · 圆柱和圆锥", icon:"🥫", free:false },
+    { id:"6下-3", sem:"下", title:"第三单元 · 解决问题的策略", icon:"🧠", free:false }
   ]
 };
