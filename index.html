@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="NmZkGYlVRVr45ft10GgAGL">
+<head data-page-node-id="q2Rrm21jdofFxPdlwRzLIL">
+<meta charset="UTF-8" data-page-node-id="ANkyeOvouoaVO0LipTDMIG">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" data-page-node-id="RPrmBFKNBfi2BmvLEWKygA">
+<title>知予数学宝典 · 小学版（苏教版）</title>
+<meta name="description" content="苏州知予数学工作室 · 苏教版1-6年级闯关宝典，闪卡翻转/连击段位/AI智能刷题，免费体验，进群领完整版" data-page-node-id="QAgxSLHLM8DPWnHqqF39ep">
+<link rel="stylesheet" href="assets/style.css" data-page-node-id="eFO4cxuNkCx4WhMw76oR15">
+</head>
+<body data-page-node-id="QB4FbCZ5FptU2xf3AsdAfw">
+<div id="app" data-page-node-id="zwlNOCqgPtepFU3qH09Eyy">
+  <header class="topbar" data-page-node-id="DCA18C3s0oRq1kwzE7NGEu">
+    <div class="brand" data-page-node-id="npD4x4IlQUvb91bGaPuosB">
+      <span class="brand-logo" data-page-node-id="vOaCOkq86wYLaf5B5QR88E">知予</span>
+      <span class="brand-sub" data-page-node-id="a53q5YTUxkJWRb5xo67GKA">数学宝典</span>
+    </div>
+    <div class="topbar-right" data-page-node-id="F7esPB29cTcAFGul9AP3fZ">
+      <span class="streak-badge" id="streakBadge" title="连续学习天数" data-page-node-id="FPTRd9edol3HaIXqQKjsIZ">🔥<b id="streakNum" data-page-node-id="6muOsuUplCWzN4dcDAddUH">1</b>天</span>
+      <span class="rank-badge" id="rankBadge" data-page-node-id="dKPFJh31GUG05jF331HVPH">青铜</span>
+      <button class="topbar-join" id="btnJoinTop" data-page-node-id="PWyipEgfEzmtXdoUVt76rp">进群领完整版</button>
+    </div>
+  </header>
+
+  <main id="view" data-page-node-id="GaAMznSyiGHvmM9XCS5SlN"></main>
+
+  <!-- 段位晋升横幅 -->
+  <div class="rank-banner" id="rankBanner" hidden data-page-node-id="CWHz1kJnzj4MMlCCjVTNyC">
+    <div class="rb-inner" data-page-node-id="KVctqvbZPKhnMX3vGy361M">🎉 段位晋升 · <b id="rbRank" data-page-node-id="Q7qpiC5Giyp6K93uws5yLG">黄金</b></div>
+  </div>
+  <!-- 新纪录 toast -->
+  <div class="toast" id="toast" hidden data-page-node-id="FyCdMECskMJSWIoB9qbb7f"></div>
+
+  <div class="join-bar" id="joinBar" data-page-node-id="BW4Bn98QwYhnXQIwTd0gXM">
+    <div class="join-bar-text" data-page-node-id="YtCFrw8qQQzLsnUT7hxvHp"><b data-page-node-id="NqxoUf6y8v4JFrrlugGNUx">完整版需卡密</b><span data-page-node-id="7CoapkeMr9pgFPoTMt5u5N">进群免费领 · 含名师每周答疑</span></div>
+    <button class="join-bar-btn" id="btnJoinBar" data-page-node-id="M3n7qZ4C5uLnlKNDxqpmjq">立即进群</button>
+  </div>
+
+  <div class="modal-mask" id="unlockModal" hidden data-page-node-id="PPf5K0uWRFcruwK8uDldxI">
+    <div class="modal" data-page-node-id="JKFBQxi7XYj9AKMieTRKjn">
+      <button class="modal-close" id="unlockClose" data-page-node-id="baNUs2z3zuNxfHuHwCurlm">×</button>
+      <h3 data-page-node-id="RUrwHq1A0G10DutGG8QiEY">输入卡密解锁</h3>
+      <p class="modal-tip" data-page-node-id="LS6CA0xfy9pG4aRJU0Rbau">卡密在「知予家长群」内免费发放。<br data-page-node-id="jj64T5mke3h1voXrdNNcRW">还没进群？先扫码进群领卡密 👇</p>
+      <input type="text" id="cardInput" placeholder="如 ZHIYU-2026" autocomplete="off" data-page-node-id="EhVdznYlVsfq7P8gOVbM43">
+      <p class="modal-err" id="cardErr" hidden data-page-node-id="2p9YpsEqDyMTiZWyHplKvT">卡密无效，请核对后重试</p>
+      <button class="modal-submit" id="cardSubmit" data-page-node-id="oXKoLSVOh2mGcJGJtnN4il">解锁</button>
+      <button class="modal-ghost" id="cardToJoin" data-page-node-id="1b7yT4e3etDRR9afdrCQwm">我没卡密，去进群领 →</button>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="joinModal" hidden data-page-node-id="E1NjuCjp1aixFiVr4h6jRv">
+    <div class="modal" data-page-node-id="b7sFDjQgpFStOIOCIEZd9P">
+      <button class="modal-close" id="joinClose" data-page-node-id="VJZTpwZXe7BZ0jFOPHwdJM">×</button>
+      <h3 data-page-node-id="E1DoS40F6hE8Sje6qY6SHb">扫码进「知予家长群」</h3>
+      <p class="modal-tip" data-page-node-id="5PB9G7LOAqb2jI60DFMfsv">群内免费发<b data-page-node-id="9652pd0tjNPi92pO5jHjon">完整版卡密</b>，还有蓝双老师每周<b data-page-node-id="AmEqjgz9BWxUQNdlsiiWoT">错题答疑 & 升学信息差</b>。</p>
+      <div class="qr-box" data-page-node-id="iVY7qsOm3M2IFRmWQIOeHG"><img id="qrImg" alt="群二维码" src="" onerror="this.style.display='none'" data-page-node-id="nTmHRM4RXfFnXdwsjWWUHI"><div class="qr-ph" data-page-node-id="OO86NMvk8gyjNsC3K5WT8v">群活码<br data-page-node-id="tGL3B0EXhRRhJZXcJ7PtOJ">放 assets/group-qr.png</div></div>
+      <p class="modal-sub" data-page-node-id="LAsCPxeVV1yE8wEw9YCuqO">二维码请替换为你的群活码：<code data-page-node-id="sV8CqA0YidmXPbOuY4WTY1">assets/group-qr.png</code></p>
+      <a class="modal-submit" id="joinCopy" href="#" onclick="return false;" data-page-node-id="6zywyqFRv33KkHvD7al3fd">复制群口令：知予数学宝典</a>
+    </div>
+  </div>
+
+  <canvas id="confetti" class="confetti-canvas" data-page-node-id="QMUDU4uD33yikuIIqPbrTK"></canvas>
+</div>
+
+<script src="assets/data/grade1.js"></script>
+<script src="assets/data/grade2.js"></script>
+<script src="assets/data/grade3.js"></script>
+<script src="assets/data/grade4.js"></script>
+<script src="assets/data/grade5.js"></script>
+<script src="assets/data/grade6.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
