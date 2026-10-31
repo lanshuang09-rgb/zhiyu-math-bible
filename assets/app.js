@@ -10,8 +10,10 @@
     brand:"知予",
     groupQR:"assets/group-qr.png",
     groupPassword:"知予数学宝典",
-    // 卡密已做 base64 混淆，避免源码明文裸奔。
-    // 注意：静态站无法真安全，正式生产务必接后端校验接口（/api/card/verify）。
+    // 卡密后端校验地址。留空 = 仅用本地混淆卡密（demo 用，非真安全）。
+    // 填入你的 serverless 地址后，解锁走后端：POST {apiBase}/card/verify  {card,grade} → {valid,master}
+    apiBase:"",
+    // 本地混淆卡密（离线兜底 / demo 用）。正式生产以后端为准，可清空这两项。
     _cardsB64:"WyJaSElZVS0yMDI2IiwgIlNIVVhVRS1CSUJMRSIsICLnn6XkuojmlbDlrablrp3lhbgiXQ==",
     _masterB64:"WkhJWVUtVklQ"
   };
@@ -292,12 +294,39 @@
   /* 卡密 / 进群 */
   function openUnlock(grade){
     var m=$("#unlockModal"); m.hidden=false; $("#cardErr").hidden=true; $("#cardInput").value="";
-    $("#cardSubmit").onclick=function(){ var v=($("#cardInput").value||"").trim().toUpperCase();
-      if(v===MASTER_CARD.toUpperCase()){state.master=true;save();m.hidden=true;confetti();track("card_unlock",{g:grade,master:true});go({name:"units",grade:grade});return;}
-      if(VALID_CARDS.map(function(x){return x.toUpperCase();}).indexOf(v)>=0){state.cards[grade]=true;save();m.hidden=true;confetti();track("card_unlock",{g:grade});go({name:"units",grade:grade});return;}
-      $("#cardErr").hidden=false; };
+    $("#cardSubmit").onclick=function(){
+      var v=($("#cardInput").value||"").trim(); if(!v)return;
+      var btn=$("#cardSubmit"); btn.disabled=true; btn.textContent="校验中…";
+      verifyCard(v,grade).then(function(res){
+        btn.disabled=false; btn.textContent="解锁";
+        if(res&&res.valid){
+          if(res.master){state.master=true;track("card_unlock",{g:grade,master:true});}
+          else{state.cards[grade]=true;track("card_unlock",{g:grade});}
+          save(); m.hidden=true; confetti(); go({name:"units",grade:grade}); return;
+        }
+        $("#cardErr").hidden=false;
+      }).catch(function(){ btn.disabled=false; btn.textContent="解锁"; $("#cardErr").hidden=false; });
+    };
     $("#cardToJoin").onclick=function(){m.hidden=true;openJoin();};
     $("#unlockClose").onclick=function(){m.hidden=true;};
+  }
+  /* 卡密校验：优先后端，网络异常回退本地（离线兜底） */
+  function verifyCard(card,grade){
+    if(CONFIG.apiBase){
+      return fetch(CONFIG.apiBase.replace(/\/$/,"")+"/card/verify",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({card:card,grade:grade})
+      }).then(function(r){return r.json();}).then(function(d){
+        if(d&&typeof d.valid==="boolean")return d; throw new Error("bad resp");
+      }).catch(function(){ return verifyLocal(card,grade); });
+    }
+    return Promise.resolve(verifyLocal(card,grade));
+  }
+  function verifyLocal(card,grade){
+    var v=card.trim().toUpperCase();
+    if(v===MASTER_CARD.toUpperCase())return {valid:true,master:true};
+    if(VALID_CARDS.map(function(x){return x.toUpperCase();}).indexOf(v)>=0)return {valid:true,master:false};
+    return {valid:false};
   }
   function openJoin(tip){
     track("join_open",{});
