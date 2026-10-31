@@ -23,7 +23,7 @@
   var RANK_STAR=[0,3,7,13,21,31,46];
 
   var GRADE_STYLE={
-    1:{a:"#FF7A45",d:"#E85D2A",l:"#FFE9DD",m:"🐣"},
+    1:{a:"#58A6F5",d:"#2E7FD0",l:"#E8F3FE",m:"🐣"},
     2:{a:"#18B58B",d:"#0E8C6B",l:"#DDF6EF",m:"🐰"},
     3:{a:"#4A90E2",d:"#2F6FC0",l:"#E3F0FC",m:"🐬"},
     4:{a:"#8E5BE0",d:"#6E3FC0",l:"#EFE6FB",m:"🦄"},
@@ -179,7 +179,7 @@
     applyAccent(grade);
     var g=window.GRADE_DATA[grade], u=g.units.filter(function(x){return x.id===unitId;})[0];
     if(!u||!isUnlocked(grade,unitId))return openUnlock(grade);
-    var tabs=[["mindmap","导图"],["cards","闪卡"],["challenge","闯关"],["boss","Boss"],["rand","随机练"],["life","生活"],["pits","避坑"],["test","测试卷"]];
+    var tabs=[["mindmap","导图"],["cards","闪卡"],["challenge","闯关"],["boss","Boss"],["rand","随机练"],["life","🏠生活"],["pits","⚠️避坑"],["test","测试卷"]];
     var th='<div class="tabs">'; tabs.forEach(function(t){th+='<div class="tab'+(t[0]===tab?" on":"")+'" data-t="'+t[0]+'">'+t[1]+'</div>';}); th+='</div>';
     view.innerHTML='<button class="back-btn" id="bk">← 单元</button>'+th+'<div id="panel"></div>';
     $("#bk").onclick=function(){go({name:"units",grade:grade});};
@@ -199,10 +199,17 @@
       $("#fcP").onclick=function(e){e.stopPropagation();ci=(ci-1+u.cards.length)%u.cards.length;state["_fc_"+u.id]=ci;save();renderPanel("cards",u,grade);};
       $("#fcN").onclick=function(e){e.stopPropagation();ci=(ci+1)%u.cards.length;state["_fc_"+u.id]=ci;save();renderPanel("cards",u,grade);};
     }
-    else if(tab==="life"){ p.innerHTML='<div class="panel">'+(u.life&&u.life.length?u.life.map(function(s){return '<div class="life-item">🏠 '+fmt(s)+'</div>';}).join(""):'<p style="color:#888">暂无</p>')+'</div>'; }
+    else if(tab==="life"){
+      var lifeEmo=["🏠","🛒","🍎","⏰","📏","🧁","🚗","🍬"];
+      p.innerHTML='<div class="lp-head">🏠 生活中的数学 · 把课本搬进日子</div><div class="lp-list">'+
+        (u.life&&u.life.length?u.life.map(function(s,i){return '<div class="lp-card life-card" style="animation-delay:'+(i*0.07)+'s"><span class="lp-emoji">'+lifeEmo[i%lifeEmo.length]+'</span><div class="lp-text">'+fmt(s)+'</div></div>';}).join(""):'<p style="color:#888">暂无</p>')+
+        '</div>';
+    }
     else if(tab==="pits"){
-      p.innerHTML='<div class="panel">'+(u.pits&&u.pits.length?u.pits.map(function(s){return '<div class="pit-item">⚠️ '+fmt(s)+'</div>';}).join(""):'<p style="color:#888">暂无</p>')+
-        (u.koujue?'<div class="koujue">🔑 口诀：'+fmt(u.koujue)+'</div>':'');
+      var pitEmo=["⚠️","🚫","🔍","💡","❓","🪤","🌀","📛"];
+      p.innerHTML='<div class="lp-head">⚠️ 易错避坑 · 这些地方最易丢分</div><div class="lp-list">'+
+        (u.pits&&u.pits.length?u.pits.map(function(s,i){return '<div class="lp-card pit-card" style="animation-delay:'+(i*0.07)+'s"><span class="lp-emoji">'+pitEmo[i%pitEmo.length]+'</span><div class="lp-text">'+fmt(s)+'</div></div>';}).join(""):'<p style="color:#888">暂无</p>')+
+        '</div>'+(u.koujue?'<div class="koujue">🔑 口诀：'+fmt(u.koujue)+'</div>':'');
     }
     else if(tab==="challenge"){ startQuiz(p,u.challenge,"闯关",u,grade,false); }
     else if(tab==="boss"){ if(u.boss&&u.boss.q){ startQuiz(p,[u.boss],"Boss挑战",u,grade,false,u.boss.reward); } else { p.innerHTML='<div class="panel">本单元暂未开放 Boss 挑战，先去闯关练手 👊</div>'; } }
@@ -269,7 +276,7 @@
       track("quiz_finish",{g:grade,u:u.id,label:label,rate:rate,stars:stars});
       var rec=state.units[u.id]||{stars:0,best:0}, before=rankOf(totalStars()-stars), after=rankOf(totalStars());
       rec.stars=Math.max(rec.stars,stars); rec.best=Math.max(rec.best||0,rate); state.units[u.id]=rec;
-      var rankUp=after>before||(rate===100); save();
+      var rankUp=after>before||(rate===100); save(); syncLearning();
       if(rankUp){ confetti(); showRank(after); }
       var tag=rate===100?"· 全对！太稳了":rate>=60?"· 不错，继续冲":"· 再练练就通";
       var rEmoji=rate===100?"🏆":rate>=60?"😎":"🌱";
@@ -302,7 +309,7 @@
         if(res&&res.valid){
           if(res.master){state.master=true;track("card_unlock",{g:grade,master:true});}
           else{state.cards[grade]=true;track("card_unlock",{g:grade});}
-          save(); m.hidden=true; confetti(); go({name:"units",grade:grade}); return;
+          save(); syncLearning(); m.hidden=true; confetti(); go({name:"units",grade:grade}); return;
         }
         $("#cardErr").hidden=false;
       }).catch(function(){ btn.disabled=false; btn.textContent="解锁"; $("#cardErr").hidden=false; });
@@ -363,9 +370,30 @@
     };
     $("#wbClear").onclick=function(){ clearWrong(); openWrongbook(); };
   }
+  /* 家长后台（localStorage 本地 + 可接后端同步/查看） */
   function openReport(){
-    var m=$("#infoModal"); m.hidden=false; $("#infoTitle").textContent="📊 学习报告";
+    var m=$("#infoModal"); m.hidden=false; $("#infoTitle").textContent="👨‍👩‍👧 家长后台";
     var body=$("#infoBody");
+    var s=computeStats();
+    var html=
+      '<div class="rp-sync">'+
+        (CONFIG.apiBase
+          ? '<button class="rp-btn" id="rpSync">☁️ 同步学习数据到后端</button><button class="rp-btn ghost" id="rpCloud">📥 从云端查看</button>'
+          : '<div class="rp-note">未配置后端地址（CONFIG.apiBase 为空），当前展示本机数据。配置后学习数据会自动同步到您刚搭的后端，家长可跨设备查看。</div>')+
+      '</div>'+
+      '<div class="rp-grid">'+rp("⭐ 收集星数",s.stars)+rp("🏅 当前段位",s.rank)+rp("🔥 连续天数",s.streak)+
+        rp("📚 已挑战单元",s.unitCount)+rp("✅ 平均正确率",s.avg+"%")+rp("📕 错题总数",s.wrongCount)+'</div>'+
+      '<div class="rp-sec"><div class="rp-h">📈 各单元正确率（最佳）</div>'+s.unitBars+'</div>'+
+      (s.badges.length?'<div class="rp-sec"><div class="rp-h">🏆 已得徽章</div><div class="rp-badges">'+s.badges.map(function(b){return '<span class="rp-badge">'+fmt(b)+'</span>';}).join("")+'</div></div>':'')+
+      (s.weak.length?'<div class="rp-sec"><div class="rp-h">⚠️ 薄弱单元（最佳＜60%）</div><div class="rp-weak">'+s.weak.join("、")+'</div></div>':'<div class="rp-sec"><div class="rp-h">✨ 暂无明显薄弱点，保持！</div></div>')+
+      (s.lastT?'<div class="rp-foot">最近练习：'+new Date(s.lastT).toLocaleString("zh-CN")+'</div>':'<div class="rp-foot">还没有练习记录，去闯关试试～</div>');
+    body.innerHTML=html;
+    if(CONFIG.apiBase){
+      $("#rpSync").onclick=function(){ syncLearning(); var b=$("#rpSync"); b.textContent="✅ 已同步"; setTimeout(function(){b.textContent="☁️ 同步学习数据到后端";},1500); };
+      $("#rpCloud").onclick=function(){ loadCloudReport(body); };
+    }
+  }
+  function computeStats(){
     var stars=totalStars(), rank=RANKS[rankOf(stars)], streak=state.streak||1;
     var unitCount=Object.keys(state.units).length;
     var finishes=state.events.filter(function(e){return e.type==="quiz_finish";});
@@ -373,16 +401,37 @@
     var wrongCount=state.wrong.length;
     var badges=state.events.filter(function(e){return e.type==="badge";}).map(function(e){return e.badge;});
     var lastT=state.events.length? state.events[state.events.length-1].t : null;
-    var weak=[]; for(var k in state.units){ if((state.units[k].best||0)<60) weak.push(k+"（最佳"+(state.units[k].best||0)+"%）"); }
-    var html=
-      '<div class="rp-grid">'+
-        rp("⭐ 收集星数",stars)+rp("🏅 当前段位",rank)+rp("🔥 连续天数",streak)+
-        rp("📚 已挑战单元",unitCount)+rp("✅ 平均正确率",avg+"%")+rp("📕 错题总数",wrongCount)+
-      '</div>'+
-      (badges.length?'<div class="rp-sec"><div class="rp-h">🏆 已得徽章</div><div class="rp-badges">'+badges.map(function(b){return '<span class="rp-badge">'+fmt(b)+'</span>';}).join("")+'</div></div>':'')+
-      (weak.length?'<div class="rp-sec"><div class="rp-h">⚠️ 薄弱单元</div><div class="rp-weak">'+weak.join("、")+'</div></div>':'<div class="rp-sec"><div class="rp-h">✨ 暂无明显薄弱点，保持！</div></div>')+
-      (lastT?'<div class="rp-foot">最近练习：'+new Date(lastT).toLocaleString("zh-CN")+'</div>':'<div class="rp-foot">还没有练习记录，去闯关试试～</div>');
-    body.innerHTML=html;
+    var weak=[], unitBars="";
+    for(var k in state.units){ var best=state.units[k].best||0;
+      if(best<60) weak.push(k+"（最佳"+best+"%）");
+      var col=best>=80?"#2BB673":best>=60?"#F5A623":"#E8554E";
+      unitBars+='<div class="rp-bar"><span class="rp-bar-name">'+k+'</span><span class="rp-bar-track"><i style="width:'+best+'%;background:'+col+'"></i></span><span class="rp-bar-val">'+best+'%</span></div>';
+    }
+    if(!unitBars) unitBars='<p style="color:#888;font-size:12px">暂无单元数据，去闯关后会自动记录 📊</p>';
+    return {stars:stars,rank:rank,streak:streak,unitCount:unitCount,avg:avg,wrongCount:wrongCount,badges:badges,weak:weak,lastT:lastT,unitBars:unitBars};
+  }
+  function syncLearning(){
+    if(!CONFIG.apiBase)return;
+    try{
+      var payload={stars:totalStars(),units:state.units,wrong:state.wrong.length,events:state.events.slice(-50),at:Date.now()};
+      fetch(CONFIG.apiBase.replace(/\/$/,"")+"/learning/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).catch(function(){});
+    }catch(e){}
+  }
+  function loadCloudReport(body){
+    if(!CONFIG.apiBase)return;
+    body.innerHTML='<p class="info-tip">正在从云端拉取家长视图…</p>';
+    fetch(CONFIG.apiBase.replace(/\/$/,"")+"/learning/report").then(function(r){return r.json();}).then(function(d){
+      var html='<div class="rp-cloud"><div class="rp-h">☁️ 云端学习概况</div><div class="rp-grid">';
+      if(d&&typeof d==="object"){
+        if(d.stars!=null)html+=rp("⭐ 星数",d.stars);
+        if(d.avg!=null)html+=rp("✅ 平均正确率",d.avg+"%");
+        if(d.wrong!=null)html+=rp("📕 错题",d.wrong);
+        html+='</div>';
+        if(Array.isArray(d.units)&&d.units.length){ html+='<div class="rp-sec"><div class="rp-h">📈 各单元正确率</div>';
+          html+=d.units.map(function(u){var b=u.best||0;var col=b>=80?"#2BB673":b>=60?"#F5A623":"#E8554E";return '<div class="rp-bar"><span class="rp-bar-name">'+(u.name||u.id)+'</span><span class="rp-bar-track"><i style="width:'+b+'%;background:'+col+'"></i></span><span class="rp-bar-val">'+b+'%</span></div>';}).join("")+'</div>'; }
+      } else { html+='</div><p class="info-tip">云端暂无可读数据。</p>'; }
+      html+='</div>'; body.innerHTML=html;
+    }).catch(function(){ body.innerHTML='<p class="info-tip">拉取失败，请确认后端地址与 /learning/report 接口可用。</p>'; });
   }
   function rp(k,v){return '<div class="rp-card"><div class="rp-v">'+v+'</div><div class="rp-k">'+k+'</div></div>'; }
 
