@@ -4,7 +4,7 @@
 <meta charset="UTF-8" data-page-node-id="ANkyeOvouoaVO0LipTDMIG">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" data-page-node-id="RPrmBFKNBfi2BmvLEWKygA">
 <title>知予数学宝典 · 小学版（苏教版）</title>
-<meta name="description" content="苏州知予数学工作室 · 苏教版1-6年级闯关宝典，闪卡翻转/连击段位/AI智能刷题，免费体验，进群领完整版" data-page-node-id="QAgxSLHLM8DPWnHqqF39ep">
+<meta name="description" content="苏州知予数学工作室 · 苏教版1-6年级闯关宝典，闪卡翻转/连击段位/随机组卷/错题本/学习报告，免费体验，进群领完整版" data-page-node-id="QAgxSLHLM8DPWnHqqF39ep">
 <link rel="stylesheet" href="assets/style.css" data-page-node-id="eFO4cxuNkCx4WhMw76oR15">
 </head>
 <body data-page-node-id="QB4FbCZ5FptU2xf3AsdAfw">
@@ -18,6 +18,8 @@
       <span class="streak-badge" id="streakBadge" title="连续学习天数" data-page-node-id="FPTRd9edol3HaIXqQKjsIZ">🔥<b id="streakNum" data-page-node-id="6muOsuUplCWzN4dcDAddUH">1</b>天</span>
       <span class="rank-badge" id="rankBadge" data-page-node-id="dKPFJh31GUG05jF331HVPH">青铜</span>
       <button class="topbar-join" id="btnJoinTop" data-page-node-id="PWyipEgfEzmtXdoUVt76rp">进群领完整版</button>
+      <button class="topbar-join ghost" id="btnWrong" title="我的错题本">📕 错题</button>
+      <button class="topbar-join ghost" id="btnReport" title="学习报告">📊 报告</button>
     </div>
   </header>
 
@@ -59,6 +61,17 @@
   </div>
 
   <canvas id="confetti" class="confetti-canvas" data-page-node-id="QMUDU4uD33yikuIIqPbrTK"></canvas>
+
+  <!-- 通用信息弹窗（错题本 / 学习报告） -->
+  <div class="modal-mask" id="infoModal" hidden>
+    <div class="modal modal-wide" data-page-node-id="infoModalBox">
+      <button class="modal-close" id="infoClose" data-page-node-id="infoClose">×</button>
+      <h3 id="infoTitle" data-page-node-id="infoTitle"></h3>
+      <div id="infoBody" data-page-node-id="infoBody"></div>
+    </div>
+  </div>
+
+  <footer class="site-foot">本工具为苏教版（江苏教育出版社）教材同步练习辅助，与出版社无隶属关系，仅供学习参考 · 知予数学工作室</footer>
 </div>
 
 <script src="assets/data/grade1.js"></script>
