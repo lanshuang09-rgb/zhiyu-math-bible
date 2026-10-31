@@ -2,7 +2,7 @@ window.GRADE_DATA = window.GRADE_DATA || {};
 window.GRADE_DATA[5] = {
   grade:5, title:"五年级 · 苏教版",
   units:[
-    { id:"5上-1", sem:"上", title:"第一单元 · 认识负数", free:true,
+    { id:"5上-1", sem:"上", title:"第一单元 · 认识负数", icon:"🌡️", free:true,
       mindmap:"认识负数\n· 0 既不是正数也不是负数，是正数和负数的分界\n· 0 以上为正数（可省略+），0 以下为负数\n· 温度计、海拔、收支都能用正负数表示\n· 负数比较：绝对值大的反而小",
       cards:[
         {q:"0 是正数还是负数？", a:"0 都不是，它是正负数的分界点。"},
@@ -32,9 +32,9 @@ window.GRADE_DATA[5] = {
         {q:"比较：﹣9 ○ ﹣2，应填？", type:"choice", options:["＞","＜","="], key:"＜", a:"﹣9 更小。"}
       ]
     },
-    { id:"5上-2", sem:"上", title:"第二单元 · 多边形面积的计算", free:false },
-    { id:"5上-3", sem:"上", title:"第三单元 · 小数的意义和性质", free:false },
-    { id:"5下-1", sem:"下", title:"第一单元 · 简易方程", free:false,
+    { id:"5上-2", sem:"上", title:"第二单元 · 多边形面积的计算", icon:"📐", free:false },
+    { id:"5上-3", sem:"上", title:"第三单元 · 小数的意义和性质", icon:"🔟", free:false },
+    { id:"5下-1", sem:"下", title:"第一单元 · 简易方程", icon:"🎯", free:false,
       mindmap:"简易方程\n· 含有未知数的等式叫方程\n· 等式性质：两边同时加/减/乘/除同一数（非0），等式仍成立\n· 解方程：求未知数的值\n· 列方程解应用题：设未知数 x，找等量关系",
       cards:[
         {q:"什么是方程？", a:"含有未知数的等式，如 x+5=12。"},
@@ -64,7 +64,7 @@ window.GRADE_DATA[5] = {
         {q:"哥哥比弟弟大5岁，弟弟 x 岁，哥哥（ ）岁。", type:"blank", key:"x+5", a:"x+5。"}
       ]
     },
-    { id:"5下-2", sem:"下", title:"第二单元 · 折线统计图", free:false },
-    { id:"5下-3", sem:"下", title:"第三单元 · 因数与倍数", free:false }
+    { id:"5下-2", sem:"下", title:"第二单元 · 折线统计图", icon:"📈", free:false },
+    { id:"5下-3", sem:"下", title:"第三单元 · 因数与倍数", icon:"🔗", free:false }
   ]
 };
