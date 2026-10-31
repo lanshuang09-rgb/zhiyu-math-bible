@@ -2,7 +2,7 @@ window.GRADE_DATA = window.GRADE_DATA || {};
 window.GRADE_DATA[4] = {
   grade:4, title:"四年级 · 苏教版",
   units:[
-    { id:"4上-1", sem:"上", title:"第一单元 · 升和毫升", free:true,
+    { id:"4上-1", sem:"上", title:"第一单元 · 升和毫升", icon:"🥤", free:true,
       mindmap:"升和毫升\n· 计量液体多少用容量单位：升(L)、毫升(mL)\n· 1升 = 1000毫升\n· 大容器用『升』，小容器用『毫升』\n· 估测：矿泉水瓶约500mL，大桶水约18L",
       cards:[
         {q:"升和毫升有什么关系？", a:"1升 = 1000毫升，升是较大的容量单位。"},
@@ -32,9 +32,9 @@ window.GRADE_DATA[4] = {
         {q:"4个250mL的杯共（ ）毫升 =（ ）升。", type:"blank", key:"1000……1", a:"4×250=1000mL=1L。"}
       ]
     },
-    { id:"4上-2", sem:"上", title:"第二单元 · 两、三位数除以两位数", free:false },
-    { id:"4上-3", sem:"上", title:"第三单元 · 观察物体", free:false },
-    { id:"4下-1", sem:"下", title:"第一单元 · 平移、旋转和轴对称", free:false,
+    { id:"4上-2", sem:"上", title:"第二单元 · 两、三位数除以两位数", icon:"➗", free:false },
+    { id:"4上-3", sem:"上", title:"第三单元 · 观察物体", icon:"👀", free:false },
+    { id:"4下-1", sem:"下", title:"第一单元 · 平移、旋转和轴对称", icon:"🔄", free:false,
       mindmap:"平移、旋转和轴对称\n· 平移：物体沿直线移动，形状大小不变\n· 旋转：绕一个点转动\n· 轴对称图形：对折后两边完全重合\n· 对称轴：折痕所在的直线",
       cards:[
         {q:"什么是平移？", a:"物体沿一个方向直直地移动，位置变、形状大小不变。"},
@@ -64,7 +64,7 @@ window.GRADE_DATA[4] = {
         {q:"拉抽屉是（ ）。", type:"choice", options:["平移","旋转"], key:"平移", a:"沿轨道直移。"}
       ]
     },
-    { id:"4下-2", sem:"下", title:"第二单元 · 认识多位数", free:false },
-    { id:"4下-3", sem:"下", title:"第三单元 · 三位数乘两位数", free:false }
+    { id:"4下-2", sem:"下", title:"第二单元 · 认识多位数", icon:"🔢", free:false },
+    { id:"4下-3", sem:"下", title:"第三单元 · 三位数乘两位数", icon:"✖️", free:false }
   ]
 };
