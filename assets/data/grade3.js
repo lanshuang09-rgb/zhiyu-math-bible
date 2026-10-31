@@ -2,7 +2,7 @@ window.GRADE_DATA = window.GRADE_DATA || {};
 window.GRADE_DATA[3] = {
   grade:3, title:"三年级 · 苏教版",
   units:[
-    { id:"3上-1", sem:"上", title:"第一单元 · 两、三位数乘一位数", free:true,
+    { id:"3上-1", sem:"上", title:"第一单元 · 两、三位数乘一位数", icon:"🚀", free:true,
       mindmap:"两、三位数乘一位数\n· 整十、整百数乘一位数：先算0前面的，再添0\n· 两位数乘一位数（不进位/进位）：分别乘个位、十位\n· 三位数乘一位数：同理，注意进位\n· 0 乘任何数都得 0",
       cards:[
         {q:"20×3 怎么算？", a:"先算2×3=6，再添1个0，得60。"},
@@ -32,9 +32,9 @@ window.GRADE_DATA[3] = {
         {q:"123×2 =（ ）。", type:"blank", key:"246", a:"2×3=6，2×20=40，2×100=200，合246。"}
       ]
     },
-    { id:"3上-2", sem:"上", title:"第二单元 · 千克和克", free:false },
-    { id:"3上-3", sem:"上", title:"第三单元 · 长方形和正方形", free:false },
-    { id:"3下-1", sem:"下", title:"第一单元 · 两位数乘两位数", free:false,
+    { id:"3上-2", sem:"上", title:"第二单元 · 千克和克", icon:"⚖️", free:false },
+    { id:"3上-3", sem:"上", title:"第三单元 · 长方形和正方形", icon:"🟦", free:false },
+    { id:"3下-1", sem:"下", title:"第一单元 · 两位数乘两位数", icon:"🧮", free:false,
       mindmap:"两位数乘两位数\n· 口算：拆成整十×整十、整十×个位再相加\n· 笔算：先用个位乘，再用十位乘（末位对齐十位），最后相加\n· 进位别漏加\n· 估算：把数看成整十数估大致范围",
       cards:[
         {q:"23×10 为什么是230？", a:"23×10 就是23个10，等于230。"},
@@ -64,7 +64,7 @@ window.GRADE_DATA[3] = {
         {q:"24×11 =（ ）。", type:"blank", key:"264", a:"24×1+24×10=264。"}
       ]
     },
-    { id:"3下-2", sem:"下", title:"第二单元 · 千米和吨", free:false },
-    { id:"3下-3", sem:"下", title:"第三单元 · 解决问题的策略", free:false }
+    { id:"3下-2", sem:"下", title:"第二单元 · 千米和吨", icon:"🚚", free:false },
+    { id:"3下-3", sem:"下", title:"第三单元 · 解决问题的策略", icon:"🧠", free:false }
   ]
 };
