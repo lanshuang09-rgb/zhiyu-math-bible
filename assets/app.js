@@ -1,7 +1,8 @@
 /* ===========================================================
- * 知予数学宝典 · 富版前端引擎（零后端 / 静态可托管）
- * 趣味性：闪卡3D翻转 / 连击弹跳 / 段位晋升横幅 / 连续天数 / 新纪录 / 撒花 / AI智能刷题
+ * 知予数学宝典 · 富版引擎 v3（零后端 / 静态可托管）
+ * 趣味性：闪卡3D翻转 / 连击弹跳 / 段位晋升 / 连续天数 / 新纪录 / 撒花 / Boss挑战
  * 引流闭环：免费单元直玩 → 完整版=进群领卡密 → 全站进群入口
+ * 本次升级：judge判断题型 / 填空容错(去单位+中文数字) / Boss挑战徽章 / 随机组卷(原AI改名避免误导) / 单元记忆徽章badge+分班考钩子hook
  * =========================================================== */
 (function(){
   "use strict";
@@ -15,7 +16,6 @@
   var RANKS=["青铜","白银","黄金","铂金","钻石","星耀","王者"];
   var RANK_STAR=[0,3,7,13,21,31,46];
 
-  /* 每年级专属配色 + 吉祥物 */
   var GRADE_STYLE={
     1:{a:"#FF7A45",d:"#E85D2A",l:"#FFE9DD",m:"🐣"},
     2:{a:"#18B58B",d:"#0E8C6B",l:"#DDF6EF",m:"🐰"},
@@ -29,7 +29,6 @@
     var s=(g&&GRADE_STYLE[g])||DEF_STYLE, r=document.documentElement.style;
     r.setProperty("--a",s.a); r.setProperty("--ad",s.d); r.setProperty("--al",s.l);
   }
-  /* 把 emoji 串拆成会跳舞的 span */
   function sceneHTML(sc){
     if(!sc)return"";
     var parts=String(sc).match(/(\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F\uDE80-\uDEFF]|[\u2600-\u27BF]|.)/g)||[];
@@ -49,7 +48,27 @@
 
   function starHTML(n){var s="";for(var k=0;k<3;k++)s+=String.fromCharCode(k<n?9733:9734);return s;}
 
-  /* 连续天数 */
+  /* 填空题容错：去单位/量词，支持中文数字，数值比对 */
+  function cn2num(s){
+    var d={"零":0,"一":1,"二":2,"两":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9};
+    if(/[零一二两三四五六七八九十]/.test(s)){
+      if(s.indexOf("十")>=0){var p=s.split("十");var t=p[0]?(d[p[0]]||1):1;var o=p[1]?(d[p[1]]||0):0;return t*10+o;}
+      return d[s]!==undefined?d[s]:NaN;
+    }
+    return NaN;
+  }
+  function normCompare(a,b){
+    a=(a||"").trim(); b=(b||"").trim();
+    if(a===b)return true;
+    var strip=function(s){return s.replace(/[\s，。、（）()]/g,"").replace(/(个|只|朵|条|本|棵|颗|支|块|头|匹|尾|片|张|把|辆|架|艘|位|名|人|元|角|分|厘米|分米|米|毫米|cm|dm|m|千克|公斤|克|kg|吨|t|cm³|dm³|m³|平方|立方|倍|层|岁|年|月|日|天|时|分|秒|℃|度|左右|大约|约)/gi,"").toLowerCase();};
+    if(strip(a)===strip(b))return true;
+    var na=parseFloat((""+a).replace(/[^\d.\-]/g,"")), nb=parseFloat((""+b).replace(/[^\d.\-]/g,""));
+    if(!isNaN(na)&&!isNaN(nb)&&na===nb)return true;
+    var ca=cn2num(a), cb=cn2num(b);
+    if(!isNaN(ca)&&!isNaN(cb)&&ca===cb)return true;
+    return false;
+  }
+
   function bumpStreak(){
     var d=new Date(), today=d.getFullYear()+"/"+(d.getMonth()+1)+"/"+d.getDate();
     var y=new Date(d.getTime()-864e5), yday=y.getFullYear()+"/"+(y.getMonth()+1)+"/"+y.getDate();
@@ -83,7 +102,7 @@
       '<div class="value-grid">'+
         '<div class="value-card"><div class="vc-ico">🃏</div><div class="vc-t">闪卡翻转</div><div class="vc-d">点卡翻面看解析，记忆更牢</div></div>'+
         '<div class="value-card"><div class="vc-ico">⚔️</div><div class="vc-t">连击段位</div><div class="vc-d">COMBO 连对上瘾，晋级撒花</div></div>'+
-        '<div class="value-card"><div class="vc-ico">🤖</div><div class="vc-t">AI 智能刷题</div><div class="vc-d">实时出题即时反馈，哪里弱练哪里</div></div>'+
+        '<div class="value-card"><div class="vc-ico">🔀</div><div class="vc-t">随机组卷</div><div class="vc-d">实时打乱题库，哪里弱练哪里</div></div>'+
         '<div class="value-card"><div class="vc-ico">🏠</div><div class="vc-t">生活+避坑</div><div class="vc-d">生活应用+易错点，家长也能讲</div></div>'+
       '</div>'+
       '<div class="sec-title">怎么用 <small>三步把数学学明白</small></div>'+
@@ -110,6 +129,7 @@
     });
   }
 
+  /* 单元列表（含记忆徽章 + 分班考钩子 + Boss标记） */
   function renderUnits(grade){
     applyAccent(grade);
     var g=window.GRADE_DATA[grade]; if(!g)return renderGrades();
@@ -124,7 +144,10 @@
       var tag=u.free?'<span class="u-tag free">✨ 免费</span>':(unlocked?'<span class="u-tag">已解锁</span>':'<span class="u-tag lock">🔒 需卡密</span>');
       var meta=(state.units[u.id]&&state.units[u.id].stars)?'已得 '+state.units[u.id].stars+' ★':'未挑战 · 来闯一关';
       var lockHint=(!u.free&&!unlocked)?'<div class="u-lock-hint">进群免费领卡密，解锁全部单元 →</div>':'';
-      html+='<div class="unit-card" data-u="'+u.id+'"><div class="u-head"><span class="u-title"><span class="u-ico">'+(u.icon||"📘")+'</span>'+u.title+'</span>'+tag+'</div><div class="u-meta">'+meta+'</div>'+lockHint+'</div>';
+      var badge=u.badge?'<div class="u-badge">🏅 '+fmt(u.badge)+'</div>':'';
+      var hook=u.hook?'<div class="u-hook">💡 '+fmt(u.hook)+'</div>':'';
+      var boss=u.boss&&u.boss.q?'<div class="u-boss">👑 含 Boss 挑战</div>':'';
+      html+='<div class="unit-card" data-u="'+u.id+'"><div class="u-head"><span class="u-title"><span class="u-ico">'+(u.icon||"📘")+'</span>'+u.title+'</span>'+tag+'</div><div class="u-meta">'+meta+'</div>'+badge+hook+boss+lockHint+'</div>';
     });
     html+='<div style="height:6px"></div>';
     view.innerHTML=html;
@@ -139,7 +162,7 @@
     applyAccent(grade);
     var g=window.GRADE_DATA[grade], u=g.units.filter(function(x){return x.id===unitId;})[0];
     if(!u||!isUnlocked(grade,unitId))return openUnlock(grade);
-    var tabs=[["mindmap","导图"],["cards","闪卡"],["challenge","闯关"],["ai","AI刷题"],["life","生活"],["pits","避坑"],["test","测试卷"]];
+    var tabs=[["mindmap","导图"],["cards","闪卡"],["challenge","闯关"],["boss","Boss"],["rand","随机练"],["life","生活"],["pits","避坑"],["test","测试卷"]];
     var th='<div class="tabs">'; tabs.forEach(function(t){th+='<div class="tab'+(t[0]===tab?" on":"")+'" data-t="'+t[0]+'">'+t[1]+'</div>';}); th+='</div>';
     view.innerHTML='<button class="back-btn" id="bk">← 单元</button>'+th+'<div id="panel"></div>';
     $("#bk").onclick=function(){go({name:"units",grade:grade});};
@@ -165,30 +188,43 @@
         (u.koujue?'<div class="koujue">🔑 口诀：'+fmt(u.koujue)+'</div>':'');
     }
     else if(tab==="challenge"){ startQuiz(p,u.challenge,"闯关",u,grade,false); }
-    else if(tab==="ai"){ var pool=(u.challenge||[]).concat(u.test||[]); startQuiz(p,pool,"AI 智能刷题",u,grade,true); }
+    else if(tab==="boss"){ if(u.boss&&u.boss.q){ startQuiz(p,[u.boss],"Boss挑战",u,grade,false,u.boss.reward); } else { p.innerHTML='<div class="panel">本单元暂未开放 Boss 挑战，先去闯关练手 👊</div>'; } }
+    else if(tab==="rand"){ var pool=(u.challenge||[]).concat(u.test||[]); if(!pool.length){p.innerHTML='<div class="panel">题目整理中，进群抢先获取 👇</div>';return;} startQuiz(p,pool,"随机组卷",u,grade,true); }
     else if(tab==="test"){ startQuiz(p,u.test,"测试卷",u,grade,false); }
   }
 
-  /* 答题引擎 */
-  function startQuiz(panel,items,label,u,grade,isAI){
+  /* 答题引擎（支持 choice / judge / blank；填空容错；Boss徽章） */
+  function startQuiz(panel,items,label,u,grade,isAI,badge){
     items=items||[];
     if(!items.length){ panel.innerHTML='<div class="panel">该模块题目整理中，进群抢先获取 👇</div>'; return; }
-    if(isAI){ items=items.slice().sort(function(){return Math.random()-0.5;}); } // AI：实时打乱顺序
+    if(isAI){ items=items.slice().sort(function(){return Math.random()-0.5;}); }
     var idx=0,correct=0,combo=0,maxCombo=0,answered=false;
     var LETTERS=["A","B","C","D"];
     function render(){
       answered=false; var q=items[idx];
       var scene='<div class="quiz-scene">'+sceneHTML(q.scene||u.icon||"✏️")+'</div>';
       var opts=''; var li=0;
-      if(q.type==="choice"){ q.options.forEach(function(o){var L=LETTERS[li++]||"•";
-        opts+='<button class="quiz-opt" data-o="'+o.replace(/"/g,'&quot;')+'"><span class="opt-key">'+L+'</span><span>'+fmt(o)+'</span></button>';}); }
-      else { opts='<input class="quiz-input" id="blankAns" placeholder="💡 输入答案"><button class="quiz-submit" id="blankSub">提交答案</button>'; }
+      if(q.type==="choice"||q.type==="judge"){
+        if(q.type==="judge"){
+          opts='<button class="quiz-opt" data-o="对"><span class="opt-key">✅</span><span>对</span></button>'+
+               '<button class="quiz-opt" data-o="错"><span class="opt-key">❌</span><span>错</span></button>';
+        } else {
+          q.options.forEach(function(o){var L=LETTERS[li++]||"•";
+            opts+='<button class="quiz-opt" data-o="'+o.replace(/"/g,'&quot;')+'"><span class="opt-key">'+L+'</span><span>'+fmt(o)+'</span></button>';});
+        }
+      }
+      else { opts='<input class="quiz-input" id="blankAns" placeholder="💡 输入答案（带单位也行）"><button class="quiz-submit" id="blankSub">提交答案</button>'; }
       panel.innerHTML='<div class="panel">'+
         '<div class="qprog"><i style="width:'+Math.round(idx/items.length*100)+'%"></i></div>'+
-        '<div class="combo-bar"><span>'+label+' '+(idx+1)+' / '+items.length+(isAI?' <span class="ai-badge">🤖 实时出题</span>':'')+'</span><span>连击 <span class="combo-num" id="comboNum">'+combo+'</span></span></div>'+
+        '<div class="combo-bar"><span>'+label+' '+(idx+1)+' / '+items.length+(isAI?' <span class="ai-badge">🔀 随机出题</span>':'')+'</span><span>连击 <span class="combo-num" id="comboNum">'+combo+'</span></span></div>'+
         scene+'<div class="quiz-q">'+fmt(q.q)+'</div>'+opts+'<div class="quiz-feedback" id="fb"></div></div>';
-      if(q.type==="choice"){ Array.prototype.forEach.call(panel.querySelectorAll(".quiz-opt"),function(b){b.onclick=function(){if(answered)return;answered=true;judge(b.getAttribute("data-o")===q.key,b,q,panel);};}); }
-      else { $("#blankSub").onclick=function(){if(answered)return;answered=true;judge(($("#blankAns").value||"").trim()===String(q.key).trim(),null,q,panel);}; }
+      if(q.type!=="blank"){
+        Array.prototype.forEach.call(panel.querySelectorAll(".quiz-opt"),function(b){b.onclick=function(){if(answered)return;answered=true;judge(b.getAttribute("data-o")===q.key,b,q,panel);};});
+      } else {
+        $("#blankSub").onclick=function(){if(answered)return;answered=true;judge(normCompare(($("#blankAns").value||""),q.key),null,q,panel);};
+        var inp=$("#blankAns"); if(inp){inp.onkeydown=function(e){if(e.key==="Enter"){$("#blankSub").click();};};
+          setTimeout(function(){try{inp.focus();}catch(e){}},50);}
+      }
     }
     function judge(right,btn,q,panel){
       var fb=panel.querySelector("#fb"),opts=panel.querySelectorAll(".quiz-opt");
@@ -217,10 +253,15 @@
       if(rankUp){ confetti(); showRank(after); }
       var tag=rate===100?"· 全对！太稳了":rate>=60?"· 不错，继续冲":"· 再练练就通";
       var rEmoji=rate===100?"🏆":rate>=60?"😎":"🌱";
-      panel.innerHTML='<div class="panel result"><span class="result-emoji">'+rEmoji+'</span><div class="r-rank">'+(isAI?"AI 刷题完成 · ":"")+(label==="测试卷"?"测试完成":"闯关完成")+' · 当前段位 '+RANKS[after]+'</div>'+
-        '<div class="r-rate">'+rate+'<small>%</small></div><div class="r-tag">'+(label==="测试卷"?"本次正确率":"本轮正确率")+' '+tag+'</div>'+
+      var extra="";
+      if(badge){ extra = rate===100
+        ? '<div class="r-boss">🏆 击败 Boss！<br>获得记忆徽章：'+fmt(badge)+'</div>'
+        : '<div class="r-boss miss">还差一点，再战一次就能拿下徽章 👊</div>'; }
+      panel.innerHTML='<div class="panel result"><span class="result-emoji">'+rEmoji+'</span><div class="r-rank">'+(isAI?"随机组卷完成 · ":"")+(label==="测试卷"?"测试完成":(label==="Boss挑战"?"Boss挑战完成":"闯关完成"))+' · 当前段位 '+RANKS[after]+'</div>'+
+        '<div class="r-rate">'+rate+'<small>%</small></div><div class="r-tag">'+(label==="测试卷"?"本次正确率":(label==="Boss挑战"?"Boss挑战正确率":"本轮正确率"))+' '+tag+'</div>'+
         '<div class="r-stars">'+starHTML(stars)+'</div>'+
         (rankUp?'<div class="r-tag" style="background:#FFF3D6;color:#B8860B">🎉 段位晋升！</div>':'')+
+        extra+
         '<button class="r-cta" id="rJoin">觉得有用？进群领完整版 + 名师答疑</button>'+
         '<button class="r-share" id="rRetry">🔄 再来一次</button></div>';
       $("#rJoin").onclick=function(){openJoin();};
