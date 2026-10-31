@@ -15,6 +15,27 @@
   var RANKS=["青铜","白银","黄金","铂金","钻石","星耀","王者"];
   var RANK_STAR=[0,3,7,13,21,31,46];
 
+  /* 每年级专属配色 + 吉祥物 */
+  var GRADE_STYLE={
+    1:{a:"#FF7A45",d:"#E85D2A",l:"#FFE9DD",m:"🐣"},
+    2:{a:"#18B58B",d:"#0E8C6B",l:"#DDF6EF",m:"🐰"},
+    3:{a:"#4A90E2",d:"#2F6FC0",l:"#E3F0FC",m:"🐬"},
+    4:{a:"#8E5BE0",d:"#6E3FC0",l:"#EFE6FB",m:"🦄"},
+    5:{a:"#F2557C",d:"#D33B63",l:"#FDE4EC",m:"🐯"},
+    6:{a:"#00A6B6",d:"#007E8B",l:"#DDF2F5",m:"🦉"}
+  };
+  var DEF_STYLE={a:"#FF7A45",d:"#E85D2A",l:"#FFE9DD"};
+  function applyAccent(g){
+    var s=(g&&GRADE_STYLE[g])||DEF_STYLE, r=document.documentElement.style;
+    r.setProperty("--a",s.a); r.setProperty("--ad",s.d); r.setProperty("--al",s.l);
+  }
+  /* 把 emoji 串拆成会跳舞的 span */
+  function sceneHTML(sc){
+    if(!sc)return"";
+    var parts=String(sc).match(/(\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F\uDE80-\uDEFF]|[\u2600-\u27BF]|.)/g)||[];
+    return parts.map(function(p){return p.trim()?'<span class="sc-part">'+p+'</span>':'';}).join("");
+  }
+
   var KEY="zhiyu_math_v2", state=load();
   function load(){ try{return JSON.parse(localStorage.getItem(KEY))||{units:{},cards:[],master:false,bestCombo:0};}catch(e){return{units:{},cards:[],master:false,bestCombo:0};} }
   function save(){ try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){} }
@@ -47,10 +68,12 @@
   }
 
   function renderLanding(){
+    applyAccent(0);
     var stars=totalStars(), rank=RANKS[rankOf(stars)], streak=bumpStreak();
     updateTop(stars,rank,streak);
     view.innerHTML=
       '<section class="hero">'+
+        '<span class="hero-mascot">🐑</span>'+
         '<h1>'+CONFIG.brand+'数学宝典 · 小学版</h1>'+
         '<p>苏教版 1~6 年级 · 闯关式数学练习</p>'+
         '<div class="hero-stats"><div>⭐ <b>'+stars+'</b><br>收集星数</div><div>🏅 <b>'+rank+'</b><br>当前段位</div><div>🔥 <b>'+streak+'</b><br>连续天数</div></div>'+
@@ -71,12 +94,14 @@
   }
 
   function renderGrades(){
+    applyAccent(0);
     var avail=window.GRADE_DATA||{}, stars=totalStars();
     updateTop(stars,RANKS[rankOf(stars)],state.streak||1);
-    var html='<button class="back-btn" id="bk">← 首页</button><div class="sec-title">选择年级 <small>苏教版</small></div><div class="grade-list">';
-    for(var g=1;g<=6;g++){ var has=!!avail[g];
-      html+='<div class="grade-card'+(has?"":" locked")+'" data-g="'+g+'"><div class="g-num">'+g+'</div><div class="g-name">年级</div>'+
-            (has?'<div class="g-lock">已上线</div>':'<div class="g-lock">进群优先解锁</div>')+'</div>'; }
+    var html='<button class="back-btn" id="bk">← 首页</button><div class="sec-title">选择年级 <small>苏教版 · 每个年级都有自己的专属色</small></div><div class="grade-list">';
+    for(var g=1;g<=6;g++){ var has=!!avail[g], s=GRADE_STYLE[g]||DEF_STYLE;
+      html+='<div class="grade-card'+(has?"":" locked")+'" data-g="'+g+'" style="--gc:'+s.a+';--gc-bg:'+s.l+';--gc-line:'+s.a+'33;--gc-shadow:'+s.a+'26">'+
+            '<span class="g-mascot">'+s.m+'</span><div class="g-num">'+g+'年级</div>'+
+            (has?'<div class="g-lock on">▶ 已上线</div>':'<div class="g-lock">进群优先解锁</div>')+'</div>'; }
     html+='</div>';
     view.innerHTML=html;
     $("#bk").onclick=function(){go({name:"landing"});};
@@ -86,19 +111,20 @@
   }
 
   function renderUnits(grade){
+    applyAccent(grade);
     var g=window.GRADE_DATA[grade]; if(!g)return renderGrades();
     var stars=totalStars(); updateTop(stars,RANKS[rankOf(stars)],state.streak||1);
     var sem=route.sem||"上";
     var units=g.units.filter(function(u){return u.sem===sem;});
     var html='<button class="back-btn" id="bk">← 年级</button>'+
-      '<div class="sec-title">'+(g.title||(""+grade+"年级"))+'</div>'+
+      '<div class="sec-title">'+(GRADE_STYLE[grade]?GRADE_STYLE[grade].m+" ":"")+(g.title||(""+grade+"年级"))+'</div>'+
       '<div class="sem-tabs"><div class="sem-tab'+(sem==="上"?" on":"")+'" data-s="上">📗 上册</div><div class="sem-tab'+(sem==="下"?" on":"")+'" data-s="下">📘 下册</div></div>';
     units.forEach(function(u){
       var unlocked=isUnlocked(grade,u.id);
-      var tag=u.free?'<span class="u-tag free">免费</span>':(unlocked?'<span class="u-tag">已解锁</span>':'<span class="u-tag lock">🔒 需卡密</span>');
-      var meta=(state.units[u.id]&&state.units[u.id].stars)?'已得 '+state.units[u.id].stars+'⭐':'未挑战';
+      var tag=u.free?'<span class="u-tag free">✨ 免费</span>':(unlocked?'<span class="u-tag">已解锁</span>':'<span class="u-tag lock">🔒 需卡密</span>');
+      var meta=(state.units[u.id]&&state.units[u.id].stars)?'已得 '+state.units[u.id].stars+' ★':'未挑战 · 来闯一关';
       var lockHint=(!u.free&&!unlocked)?'<div class="u-lock-hint">进群免费领卡密，解锁全部单元 →</div>':'';
-      html+='<div class="unit-card" data-u="'+u.id+'"><div class="u-head"><span class="u-title">'+u.title+'</span>'+tag+'</div><div class="u-meta">'+meta+'</div>'+lockHint+'</div>';
+      html+='<div class="unit-card" data-u="'+u.id+'"><div class="u-head"><span class="u-title"><span class="u-ico">'+(u.icon||"📘")+'</span>'+u.title+'</span>'+tag+'</div><div class="u-meta">'+meta+'</div>'+lockHint+'</div>';
     });
     html+='<div style="height:6px"></div>';
     view.innerHTML=html;
@@ -110,6 +136,7 @@
   }
 
   function renderDetail(grade,unitId,tab){
+    applyAccent(grade);
     var g=window.GRADE_DATA[grade], u=g.units.filter(function(x){return x.id===unitId;})[0];
     if(!u||!isUnlocked(grade,unitId))return openUnlock(grade);
     var tabs=[["mindmap","导图"],["cards","闪卡"],["challenge","闯关"],["ai","AI刷题"],["life","生活"],["pits","避坑"],["test","测试卷"]];
@@ -125,9 +152,9 @@
     if(tab==="mindmap"){ p.innerHTML='<div class="panel mindmap">'+u.mindmap.split("\n").map(function(s){return s.trim()?'<p>'+fmt(s)+'</p>':'';}).join("")+'</div>'; }
     else if(tab==="cards"){
       var ci=state["_fc_"+u.id]||0, c=u.cards[ci]||{q:"（暂无闪卡）",a:""};
-      p.innerHTML='<div class="flashcard" id="fc"><div class="fc-inner"><div class="fc-face fc-front"><div class="fc-q">'+fmt(c.q)+'</div><div class="fc-hint">点击卡片翻看解析</div></div>'+
+      p.innerHTML='<div class="flashcard" id="fc"><div class="fc-inner"><div class="fc-face fc-front"><div class="fc-emoji">'+(c.scene||u.icon||"✨")+'</div><div class="fc-q">'+fmt(c.q)+'</div><div class="fc-hint">👇 点击卡片翻看解析</div></div>'+
         '<div class="fc-face fc-back"><div class="fc-a">'+fmt(c.a)+'</div><div class="fc-hint">再点收回</div></div></div></div>'+
-        '<div class="fc-nav"><button id="fcP">← 上一张</button><span id="fcI">'+(ci+1)+'/'+u.cards.length+'</span><button id="fcN">下一张 →</button></div>';
+        '<div class="fc-nav"><button id="fcP">← 上一张</button><span id="fcI">'+(ci+1)+' / '+u.cards.length+'</span><button id="fcN">下一张 →</button></div>';
       $("#fc").onclick=function(){this.classList.toggle("flipped");};
       $("#fcP").onclick=function(e){e.stopPropagation();ci=(ci-1+u.cards.length)%u.cards.length;state["_fc_"+u.id]=ci;save();renderPanel("cards",u,grade);};
       $("#fcN").onclick=function(e){e.stopPropagation();ci=(ci+1)%u.cards.length;state["_fc_"+u.id]=ci;save();renderPanel("cards",u,grade);};
@@ -148,14 +175,18 @@
     if(!items.length){ panel.innerHTML='<div class="panel">该模块题目整理中，进群抢先获取 👇</div>'; return; }
     if(isAI){ items=items.slice().sort(function(){return Math.random()-0.5;}); } // AI：实时打乱顺序
     var idx=0,correct=0,combo=0,maxCombo=0,answered=false;
+    var LETTERS=["A","B","C","D"];
     function render(){
       answered=false; var q=items[idx];
-      var opts='';
-      if(q.type==="choice"){ q.options.forEach(function(o){opts+='<button class="quiz-opt" data-o="'+o.replace(/"/g,'&quot;')+'">'+fmt(o)+'</button>';}); }
-      else { opts='<input class="quiz-input" id="blankAns" placeholder="输入答案"><button class="quiz-submit" id="blankSub">提交</button>'; }
+      var scene='<div class="quiz-scene">'+sceneHTML(q.scene||u.icon||"✏️")+'</div>';
+      var opts=''; var li=0;
+      if(q.type==="choice"){ q.options.forEach(function(o){var L=LETTERS[li++]||"•";
+        opts+='<button class="quiz-opt" data-o="'+o.replace(/"/g,'&quot;')+'"><span class="opt-key">'+L+'</span><span>'+fmt(o)+'</span></button>';}); }
+      else { opts='<input class="quiz-input" id="blankAns" placeholder="💡 输入答案"><button class="quiz-submit" id="blankSub">提交答案</button>'; }
       panel.innerHTML='<div class="panel">'+
-        '<div class="combo-bar"><span>'+label+' '+(idx+1)+'/'+items.length+(isAI?' <span class="ai-badge">🤖 实时</span>':'')+'</span><span>连击 <span class="combo-num" id="comboNum">'+combo+'</span></span></div>'+
-        '<div class="quiz-q">'+fmt(q.q)+'</div>'+opts+'<div class="quiz-feedback" id="fb"></div></div>';
+        '<div class="qprog"><i style="width:'+Math.round(idx/items.length*100)+'%"></i></div>'+
+        '<div class="combo-bar"><span>'+label+' '+(idx+1)+' / '+items.length+(isAI?' <span class="ai-badge">🤖 实时出题</span>':'')+'</span><span>连击 <span class="combo-num" id="comboNum">'+combo+'</span></span></div>'+
+        scene+'<div class="quiz-q">'+fmt(q.q)+'</div>'+opts+'<div class="quiz-feedback" id="fb"></div></div>';
       if(q.type==="choice"){ Array.prototype.forEach.call(panel.querySelectorAll(".quiz-opt"),function(b){b.onclick=function(){if(answered)return;answered=true;judge(b.getAttribute("data-o")===q.key,b,q,panel);};}); }
       else { $("#blankSub").onclick=function(){if(answered)return;answered=true;judge(($("#blankAns").value||"").trim()===String(q.key).trim(),null,q,panel);}; }
     }
@@ -163,13 +194,16 @@
       var fb=panel.querySelector("#fb"),opts=panel.querySelectorAll(".quiz-opt");
       if(right){ correct++;combo++; if(combo>maxCombo)maxCombo=combo;
         if(btn)btn.classList.add("correct"); else{var i=panel.querySelector(".quiz-input");if(i)i.style.borderColor="var(--ok)";}
-        fb.innerHTML=combo>=3?"🔥 连击 ×"+combo+"！手感来了":"✅ 答对啦"+(q.a?("<br>"+fmt(q.a)):"");
+        fb.className="quiz-feedback good";
+        fb.innerHTML=combo>=3?"🔥 连击 ×"+combo+"！手感来了":"🎉 答对啦！"+(q.a?("<br>"+fmt(q.a)):"");
+        if(combo>=5)confetti();
         if(maxCombo>state.bestCombo){ state.bestCombo=maxCombo; save(); showToast("🔥 新纪录！最长连击 "+maxCombo); }
         popCombo();
       } else { combo=0;
         if(btn){btn.classList.add("wrong");Array.prototype.forEach.call(opts,function(o){if(o.getAttribute("data-o")===q.key)o.classList.add("correct");});}
         else{var i=panel.querySelector(".quiz-input");if(i)i.style.borderColor="var(--bad)";}
-        fb.innerHTML="❌ 正确答案："+fmt(q.key)+(q.a?("<br>"+fmt(q.a)):"");
+        fb.className="quiz-feedback badd";
+        fb.innerHTML="💪 别急，正确答案："+fmt(q.key)+(q.a?("<br>"+fmt(q.a)):"");
       }
       fb.style.display="block"; $("#comboNum").textContent=combo; popCombo();
       setTimeout(function(){ idx++; if(idx<items.length)render(); else finish(); },1500);
@@ -182,7 +216,8 @@
       var rankUp=after>before||(rate===100); save();
       if(rankUp){ confetti(); showRank(after); }
       var tag=rate===100?"· 全对！太稳了":rate>=60?"· 不错，继续冲":"· 再练练就通";
-      panel.innerHTML='<div class="panel result"><div class="r-rank">'+(isAI?"AI 刷题完成":"")+(label==="测试卷"?"测试完成":"闯关完成")+' · 当前段位 '+RANKS[after]+'</div>'+
+      var rEmoji=rate===100?"🏆":rate>=60?"😎":"🌱";
+      panel.innerHTML='<div class="panel result"><span class="result-emoji">'+rEmoji+'</span><div class="r-rank">'+(isAI?"AI 刷题完成 · ":"")+(label==="测试卷"?"测试完成":"闯关完成")+' · 当前段位 '+RANKS[after]+'</div>'+
         '<div class="r-rate">'+rate+'<small>%</small></div><div class="r-tag">'+(label==="测试卷"?"本次正确率":"本轮正确率")+' '+tag+'</div>'+
         '<div class="r-stars">'+starHTML(stars)+'</div>'+
         (rankUp?'<div class="r-tag" style="background:#FFF3D6;color:#B8860B">🎉 段位晋升！</div>':'')+
