@@ -10,9 +10,13 @@
     brand:"知予",
     groupQR:"assets/group-qr.png",
     groupPassword:"知予数学宝典",
-    demoCards:["ZHIYU-2026","SHUXUE-BIBLE","知予数学宝典"],
-    masterCard:"ZHIYU-VIP"
+    // 卡密已做 base64 混淆，避免源码明文裸奔。
+    // 注意：静态站无法真安全，正式生产务必接后端校验接口（/api/card/verify）。
+    _cardsB64:"WyJaSElZVS0yMDI2IiwgIlNIVVhVRS1CSUJMRSIsICLnn6XkuojmlbDlrablrp3lhbgiXQ==",
+    _masterB64:"WkhJWVUtVklQ"
   };
+  var VALID_CARDS=(function(){try{return JSON.parse(atob(CONFIG._cardsB64));}catch(e){return [];}})();
+  var MASTER_CARD=(function(){try{return atob(CONFIG._masterB64);}catch(e){return "";}})();
   var RANKS=["青铜","白银","黄金","铂金","钻石","星耀","王者"];
   var RANK_STAR=[0,3,7,13,21,31,46];
 
@@ -36,7 +40,7 @@
   }
 
   var KEY="zhiyu_math_v2", state=load();
-  function load(){ try{return JSON.parse(localStorage.getItem(KEY))||{units:{},cards:[],master:false,bestCombo:0};}catch(e){return{units:{},cards:[],master:false,bestCombo:0};} }
+  function load(){ try{var s=JSON.parse(localStorage.getItem(KEY)); if(s&&typeof s==="object")return s;}catch(e){} return {units:{},cards:[],master:false,bestCombo:0,wrong:[],events:[]}; }
   function save(){ try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){} }
   function totalStars(){var s=0;for(var k in state.units)s+=state.units[k].stars||0;return s;}
   function rankOf(s){var r=0;for(var i=0;i<RANK_STAR.length;i++)if(s>=RANK_STAR[i])r=i;return r;}
@@ -76,6 +80,17 @@
     if(state.lastDay===yday) state.streak=(state.streak||0)+1; else state.streak=1;
     state.lastDay=today; save(); return state.streak;
   }
+
+  /* 埋点 + 错题本（localStorage，零后端） */
+  function track(type,p){ try{var e=Object.assign({t:Date.now(),type:type},p||{}); state.events.push(e); if(state.events.length>300)state.events=state.events.slice(-300); save();}catch(e){} }
+  function recordWrong(q,ans,u,grade){
+    var entry={g:grade,u:u.id,type:q.type,options:q.options,q:q.q,key:q.key,ans:ans,a:q.a||"",scene:q.scene,t:Date.now()};
+    state.wrong=state.wrong.filter(function(w){return w.q!==q.q;});
+    state.wrong.push(entry);
+    if(state.wrong.length>200)state.wrong=state.wrong.slice(-200);
+    save();
+  }
+  function clearWrong(){ state.wrong=[]; save(); }
 
   var route={name:"landing",grade:null,unit:null,tab:"mindmap",sem:"上"};
   function go(r){ Object.assign(route,r); render(); window.scrollTo(0,0); }
@@ -228,6 +243,7 @@
     }
     function judge(right,btn,q,panel){
       var fb=panel.querySelector("#fb"),opts=panel.querySelectorAll(".quiz-opt");
+      var userAns = q.type==="blank" ? (panel.querySelector("#blankAns")?panel.querySelector("#blankAns").value:"") : (btn?btn.getAttribute("data-o"):"");
       if(right){ correct++;combo++; if(combo>maxCombo)maxCombo=combo;
         if(btn)btn.classList.add("correct"); else{var i=panel.querySelector(".quiz-input");if(i)i.style.borderColor="var(--ok)";}
         fb.className="quiz-feedback good";
@@ -236,6 +252,7 @@
         if(maxCombo>state.bestCombo){ state.bestCombo=maxCombo; save(); showToast("🔥 新纪录！最长连击 "+maxCombo); }
         popCombo();
       } else { combo=0;
+        recordWrong(q,userAns,u,grade); track("wrong",{g:grade,u:u.id,label:label});
         if(btn){btn.classList.add("wrong");Array.prototype.forEach.call(opts,function(o){if(o.getAttribute("data-o")===q.key)o.classList.add("correct");});}
         else{var i=panel.querySelector(".quiz-input");if(i)i.style.borderColor="var(--bad)";}
         fb.className="quiz-feedback badd";
@@ -247,6 +264,7 @@
     function popCombo(){ var n=$("#comboNum"); if(n){n.classList.remove("pop");void n.offsetWidth;n.classList.add("pop");} }
     function finish(){
       var rate=Math.round(correct/items.length*100), stars=rate===100?3:rate>=60?2:rate>0?1:0;
+      track("quiz_finish",{g:grade,u:u.id,label:label,rate:rate,stars:stars});
       var rec=state.units[u.id]||{stars:0,best:0}, before=rankOf(totalStars()-stars), after=rankOf(totalStars());
       rec.stars=Math.max(rec.stars,stars); rec.best=Math.max(rec.best||0,rate); state.units[u.id]=rec;
       var rankUp=after>before||(rate===100); save();
@@ -256,7 +274,8 @@
       var extra="";
       if(badge){ extra = rate===100
         ? '<div class="r-boss">🏆 击败 Boss！<br>获得记忆徽章：'+fmt(badge)+'</div>'
-        : '<div class="r-boss miss">还差一点，再战一次就能拿下徽章 👊</div>'; }
+        : '<div class="r-boss miss">还差一点，再战一次就能拿下徽章 👊</div>';
+        if(rate===100) track("badge",{g:grade,u:u.id,badge:badge}); }
       panel.innerHTML='<div class="panel result"><span class="result-emoji">'+rEmoji+'</span><div class="r-rank">'+(isAI?"随机组卷完成 · ":"")+(label==="测试卷"?"测试完成":(label==="Boss挑战"?"Boss挑战完成":"闯关完成"))+' · 当前段位 '+RANKS[after]+'</div>'+
         '<div class="r-rate">'+rate+'<small>%</small></div><div class="r-tag">'+(label==="测试卷"?"本次正确率":(label==="Boss挑战"?"Boss挑战正确率":"本轮正确率"))+' '+tag+'</div>'+
         '<div class="r-stars">'+starHTML(stars)+'</div>'+
@@ -274,20 +293,75 @@
   function openUnlock(grade){
     var m=$("#unlockModal"); m.hidden=false; $("#cardErr").hidden=true; $("#cardInput").value="";
     $("#cardSubmit").onclick=function(){ var v=($("#cardInput").value||"").trim().toUpperCase();
-      if(v===CONFIG.masterCard.toUpperCase()){state.master=true;save();m.hidden=true;confetti();go({name:"units",grade:grade});return;}
-      if(CONFIG.demoCards.map(function(x){return x.toUpperCase();}).indexOf(v)>=0){state.cards[grade]=true;save();m.hidden=true;confetti();go({name:"units",grade:grade});return;}
+      if(v===MASTER_CARD.toUpperCase()){state.master=true;save();m.hidden=true;confetti();track("card_unlock",{g:grade,master:true});go({name:"units",grade:grade});return;}
+      if(VALID_CARDS.map(function(x){return x.toUpperCase();}).indexOf(v)>=0){state.cards[grade]=true;save();m.hidden=true;confetti();track("card_unlock",{g:grade});go({name:"units",grade:grade});return;}
       $("#cardErr").hidden=false; };
     $("#cardToJoin").onclick=function(){m.hidden=true;openJoin();};
     $("#unlockClose").onclick=function(){m.hidden=true;};
   }
   function openJoin(tip){
+    track("join_open",{});
     var m=$("#joinModal"); m.hidden=false; if(tip)m.querySelector(".modal-tip").innerHTML=tip;
     $("#qrImg").src=CONFIG.groupQR;
     $("#joinCopy").onclick=function(){ try{navigator.clipboard.writeText(CONFIG.groupPassword);m.querySelector(".modal-sub").innerHTML="✅ 已复制群口令：「"+CONFIG.groupPassword+"」，去微信粘贴找组织";}catch(e){m.querySelector(".modal-sub").innerHTML="群口令：「"+CONFIG.groupPassword+"」";} };
     $("#joinClose").onclick=function(){m.hidden=true;};
   }
+  /* 错题本 / 学习报告（localStorage，零后端） */
+  function openWrongbook(){
+    var m=$("#infoModal"); m.hidden=false; $("#infoTitle").textContent="📕 我的错题本";
+    var body=$("#infoBody");
+    if(!state.wrong.length){ body.innerHTML='<p class="info-empty">还没有错题，去闯关练练手吧 💪</p>'; return; }
+    var groups={};
+    state.wrong.forEach(function(w){ var k=w.g+"年级·"+w.u; (groups[k]=groups[k]||[]).push(w); });
+    var html='<p class="info-tip">共 <b>'+state.wrong.length+'</b> 道错题（已去重），点「重做错题」逐个击破 👇</p>';
+    for(var k in groups){
+      html+='<div class="wb-group"><div class="wb-gtitle">'+k+'</div>';
+      groups[k].forEach(function(w){
+        html+='<div class="wb-item"><div class="wb-q">❓ '+fmt(w.q)+'</div>'+
+              '<div class="wb-ans">✅ 正确答案：'+fmt(w.key)+(w.a?'<br><span class="wb-a">'+fmt(w.a)+'</span>':'')+'</div>'+
+              (w.ans!==undefined&&w.ans!==""?'<div class="wb-my">✏️ 你的答案：'+fmt(w.ans)+'</div>':'')+'</div>';
+      });
+      html+='</div>';
+    }
+    html+='<div class="info-actions"><button class="modal-submit" id="wbRedo">🔄 重做错题</button><button class="modal-ghost" id="wbClear">🗑 清空错题本</button></div>';
+    body.innerHTML=html;
+    $("#wbRedo").onclick=function(){
+      var g=state.wrong[0].g;
+      view.innerHTML='<button class="back-btn" id="wbBk">← 返回首页</button><div id="wbPanel"></div>';
+      $("#wbBk").onclick=function(){go({name:"landing"});};
+      var items=state.wrong.map(function(w){return {type:w.type,scene:w.scene,q:w.q,key:w.key,options:w.options,a:w.a};});
+      startQuiz($("#wbPanel"), items, "错题重做", {id:"__wrong__"}, g, false);
+    };
+    $("#wbClear").onclick=function(){ clearWrong(); openWrongbook(); };
+  }
+  function openReport(){
+    var m=$("#infoModal"); m.hidden=false; $("#infoTitle").textContent="📊 学习报告";
+    var body=$("#infoBody");
+    var stars=totalStars(), rank=RANKS[rankOf(stars)], streak=state.streak||1;
+    var unitCount=Object.keys(state.units).length;
+    var finishes=state.events.filter(function(e){return e.type==="quiz_finish";});
+    var avg = finishes.length? Math.round(finishes.reduce(function(s,e){return s+(e.rate||0);},0)/finishes.length):0;
+    var wrongCount=state.wrong.length;
+    var badges=state.events.filter(function(e){return e.type==="badge";}).map(function(e){return e.badge;});
+    var lastT=state.events.length? state.events[state.events.length-1].t : null;
+    var weak=[]; for(var k in state.units){ if((state.units[k].best||0)<60) weak.push(k+"（最佳"+(state.units[k].best||0)+"%）"); }
+    var html=
+      '<div class="rp-grid">'+
+        rp("⭐ 收集星数",stars)+rp("🏅 当前段位",rank)+rp("🔥 连续天数",streak)+
+        rp("📚 已挑战单元",unitCount)+rp("✅ 平均正确率",avg+"%")+rp("📕 错题总数",wrongCount)+
+      '</div>'+
+      (badges.length?'<div class="rp-sec"><div class="rp-h">🏆 已得徽章</div><div class="rp-badges">'+badges.map(function(b){return '<span class="rp-badge">'+fmt(b)+'</span>';}).join("")+'</div></div>':'')+
+      (weak.length?'<div class="rp-sec"><div class="rp-h">⚠️ 薄弱单元</div><div class="rp-weak">'+weak.join("、")+'</div></div>':'<div class="rp-sec"><div class="rp-h">✨ 暂无明显薄弱点，保持！</div></div>')+
+      (lastT?'<div class="rp-foot">最近练习：'+new Date(lastT).toLocaleString("zh-CN")+'</div>':'<div class="rp-foot">还没有练习记录，去闯关试试～</div>');
+    body.innerHTML=html;
+  }
+  function rp(k,v){return '<div class="rp-card"><div class="rp-v">'+v+'</div><div class="rp-k">'+k+'</div></div>'; }
+
   $("#btnJoinTop").onclick=function(){openJoin();};
   $("#btnJoinBar").onclick=function(){openJoin();};
+  $("#btnWrong").onclick=function(){openWrongbook();};
+  $("#btnReport").onclick=function(){openReport();};
+  $("#infoClose").onclick=function(){$("#infoModal").hidden=true;};
 
   /* 顶栏 / 横幅 / toast */
   function updateTop(stars,rank,streak){ $("#streakNum").textContent=streak; $("#rankBadge").textContent=rank; }
