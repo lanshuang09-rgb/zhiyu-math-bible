@@ -268,3 +268,39 @@ body::after{background:radial-gradient(circle,var(--al),transparent 70%);bottom:
 
 /* 判断题型两个大按钮 */
 .quiz-opt[data-o="对"],.quiz-opt[data-o="错"]{font-size:16px;font-weight:800}
+
+/* ============ 顶栏 ghost 按钮（错题/报告） ============ */
+.topbar-join.ghost{background:var(--bg);color:var(--ad);border:1.5px solid var(--line);padding:5px 9px;font-size:11px;font-weight:800;border-radius:18px;margin-left:6px}
+.topbar-join.ghost:active{transform:scale(.95)}
+
+/* ============ 通用信息弹窗（错题本/报告） ============ */
+.modal-wide{max-width:430px;max-height:82vh;overflow:auto;text-align:left}
+.info-empty{color:var(--ink2);text-align:center;padding:24px 0;font-size:13px}
+.info-tip{font-size:12px;color:var(--ink2);margin:2px 0 12px}
+.info-actions{display:flex;gap:10px;margin-top:14px}
+.info-actions .modal-ghost{margin-top:0}
+
+/* 错题本 */
+.wb-group{margin-bottom:14px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.wb-gtitle{background:var(--al);color:var(--ad);font-size:12px;font-weight:800;padding:6px 10px}
+.wb-item{padding:9px 11px;border-top:1px solid var(--line)}
+.wb-q{font-size:13px;font-weight:700;line-height:1.5}
+.wb-ans{font-size:12px;color:#2BA672;margin-top:5px;line-height:1.5}
+.wb-a{color:var(--ink2);font-size:11px}
+.wb-my{font-size:12px;color:var(--bad);margin-top:4px}
+
+/* 学习报告 */
+.rp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
+.rp-card{background:var(--bg);border-radius:12px;padding:11px 6px;text-align:center}
+.rp-v{font-size:18px;font-weight:800;color:var(--ad)}
+.rp-k{font-size:10px;color:var(--ink2);margin-top:3px}
+.rp-sec{margin-top:13px}
+.rp-h{font-size:13px;font-weight:800;margin-bottom:7px}
+.rp-badges{display:flex;flex-wrap:wrap;gap:7px}
+.rp-badge{background:linear-gradient(135deg,#FFF3D6,#FFE3A8);color:#9A6B00;border-radius:10px;padding:5px 11px;font-size:12px;font-weight:800}
+.rp-weak{background:#FDECEC;color:#C0392B;border-radius:12px;padding:9px 12px;font-size:12px;line-height:1.6}
+.rp-foot{margin-top:14px;font-size:11px;color:var(--ink2);text-align:center}
+
+/* ============ 苏教版免责声明 footer ============ */
+.site-foot{position:fixed;left:0;right:0;bottom:62px;max-width:480px;margin:0 auto;z-index:40;text-align:center;font-size:10.5px;color:var(--ink2);
+  background:rgba(255,255,255,.92);backdrop-filter:blur(4px);padding:7px 12px;border-top:1px solid var(--line);line-height:1.5}
