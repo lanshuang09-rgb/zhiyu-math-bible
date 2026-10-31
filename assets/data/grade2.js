@@ -2,7 +2,7 @@ window.GRADE_DATA = window.GRADE_DATA || {};
 window.GRADE_DATA[2] = {
   grade:2, title:"二年级 · 苏教版",
   units:[
-    { id:"2上-1", sem:"上", title:"第一单元 · 100以内的加法和减法（三）", free:true,
+    { id:"2上-1", sem:"上", title:"第一单元 · 100以内的加法和减法（三）", icon:"➕", free:true,
       mindmap:"100以内的加、减法（一）\n· 整十数加、减整十数：十位相加减\n· 两位数加一位数（不进位）/ 减一位数（不退位）\n· 两位数加、减整十数\n· 连加、连减、加减混合：从左往右依次算",
       cards:[
         {q:"34+20 怎么算？", a:"十位3+2=5，个位不变，得54。加整十数只动十位。"},
@@ -32,9 +32,9 @@ window.GRADE_DATA[2] = {
         {q:"下面结果最大的是？", type:"choice", options:["40+9","55-8","30+30"], key:"30+30", a:"30+30=60 最大。"}
       ]
     },
-    { id:"2上-2", sem:"上", title:"第二单元 · 平行四边形的初步认识", free:false },
-    { id:"2上-3", sem:"上", title:"第三单元 · 表内乘法（一）", free:false },
-    { id:"2下-1", sem:"下", title:"第一单元 · 有余数的除法", free:false,
+    { id:"2上-2", sem:"上", title:"第二单元 · 平行四边形的初步认识", icon:"🔷", free:false },
+    { id:"2上-3", sem:"上", title:"第三单元 · 表内乘法（一）", icon:"✖️", free:false },
+    { id:"2下-1", sem:"下", title:"第一单元 · 有余数的除法", icon:"🍪", free:false,
       mindmap:"有余数的除法\n· 平均分后有剩余，剩余的数叫余数\n· 余数一定比除数小（余数 < 除数）\n· 算式：被除数 ÷ 除数 = 商 …… 余数\n· 余数的单位要和被除数一致",
       cards:[
         {q:"什么叫『余数』？", a:"把一些物体平均分，分完还有剩下不够再分一份，剩下的就是余数。"},
@@ -64,7 +64,7 @@ window.GRADE_DATA[2] = {
         {q:"30颗糖每4颗一袋，能装（ ）袋剩（ ）颗。", type:"blank", key:"7……2", a:"4×7=28，剩2颗。"}
       ]
     },
-    { id:"2下-2", sem:"下", title:"第二单元 · 时、分、秒", free:false },
-    { id:"2下-3", sem:"下", title:"第三单元 · 认识方向", free:false }
+    { id:"2下-2", sem:"下", title:"第二单元 · 时、分、秒", icon:"⏰", free:false },
+    { id:"2下-3", sem:"下", title:"第三单元 · 认识方向", icon:"🧭", free:false }
   ]
 };
