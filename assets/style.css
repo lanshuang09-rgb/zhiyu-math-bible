@@ -330,3 +330,23 @@ body::after{background:radial-gradient(circle,var(--al),transparent 70%);bottom:
 .rp-btn.ghost{background:none;border:1.5px solid var(--line);color:var(--ad)}
 .rp-note{font-size:11.5px;color:var(--ink2);background:var(--al);border-radius:12px;padding:10px 12px;line-height:1.6}
 .rp-cloud{animation:riseIn .35s both}
+
+/* ============ 思维导图（真正的放射树状） ============ */
+.mm-wrap{padding:4px 2px 6px}
+.mm{display:flex;flex-direction:column;align-items:center;padding:8px 4px 4px}
+.mm-center{background:linear-gradient(135deg,var(--a),var(--ad));color:#fff;font-weight:800;font-size:14px;padding:11px 16px;border-radius:16px;
+  box-shadow:0 8px 18px rgba(0,0,0,.14);animation:popIn .4s both;text-align:center;max-width:250px;line-height:1.35}
+.mm-drop{width:3px;height:15px;background:linear-gradient(var(--a),var(--ad));border-radius:3px;animation:growH .3s both}
+.mm-tree{position:relative;display:flex;gap:9px;width:100%;padding-top:2px;margin-top:9px}
+.mm-tree::before{content:"";position:absolute;top:0;left:13%;right:13%;height:3px;background:linear-gradient(90deg,var(--a),var(--ad));border-radius:3px;animation:growW .5s both}
+.mm-branch{flex:1;display:flex;flex-direction:column;align-items:center;min-width:0;animation:mmIn .5s both}
+.mm-spine{width:3px;height:12px;background:var(--a);border-radius:3px}
+.mm-btitle{color:#fff;font-size:11.5px;font-weight:800;padding:6px 8px;border-radius:11px;line-height:1.3;text-align:center;width:100%;
+  box-shadow:0 3px 8px rgba(0,0,0,.12);margin-top:-1px}
+.mm-leaves{margin-top:7px;display:flex;flex-direction:column;gap:5px;width:100%}
+.mm-leaf{position:relative;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 7px 6px 18px;
+  font-size:11px;line-height:1.42;color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.mm-leaf .mm-dot{position:absolute;left:7px;top:10px;width:6px;height:6px;border-radius:50%}
+.mm-hint{margin-top:12px;text-align:center;font-size:11px;color:var(--ink2);background:var(--al);border-radius:10px;padding:7px 10px}
+@keyframes mmIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes growH{from{height:0}}
