@@ -11,7 +11,7 @@
     groupQR:"assets/group-qr.png",
     groupPassword:"知予数学宝典",
     // 卡密后端校验地址。留空 = 仅用本地混淆卡密（demo 用，非真安全）。
-    // 填入你的 serverless 地址后，解锁走后端：POST {apiBase}/card/verify  {card,grade} → {valid,master}
+    // 填入你的 serverless 地址后，解锁走后端：POST {apiBase}/api/card/verify  {card,grade} → {valid,master}
     apiBase:"",
     // 本地混淆卡密（离线兜底 / demo 用）。正式生产以后端为准，可清空这两项。
     _cardsB64:"WyJaSElZVS0yMDI2IiwgIlNIVVhVRS1CSUJMRSIsICLnn6XkuojmlbDlrablrp3lhbgiXQ==",
@@ -330,8 +330,8 @@
       verifyCard(v,grade).then(function(res){
         btn.disabled=false; btn.textContent="解锁";
         if(res&&res.valid){
-          if(res.master){state.master=true;track("card_unlock",{g:grade,master:true});}
-          else{state.cards[grade]=true;track("card_unlock",{g:grade});}
+          if(res.master){state.master=true;state.activeCard="@master";track("card_unlock",{g:grade,master:true});}
+          else{state.cards[grade]=true;state.activeCard=v;track("card_unlock",{g:grade});}
           save(); syncLearning(); m.hidden=true; confetti(); go({name:"units",grade:grade}); return;
         }
         $("#cardErr").hidden=false;
@@ -343,7 +343,7 @@
   /* 卡密校验：优先后端，网络异常回退本地（离线兜底） */
   function verifyCard(card,grade){
     if(CONFIG.apiBase){
-      return fetch(CONFIG.apiBase.replace(/\/$/,"")+"/card/verify",{
+      return fetch(CONFIG.apiBase.replace(/\/$/,"")+"/api/card/verify",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({card:card,grade:grade})
       }).then(function(r){return r.json();}).then(function(d){
@@ -401,7 +401,8 @@
     var html=
       '<div class="rp-sync">'+
         (CONFIG.apiBase
-          ? '<button class="rp-btn" id="rpSync">☁️ 同步学习数据到后端</button><button class="rp-btn ghost" id="rpCloud">📥 从云端查看</button>'
+          ? '<input id="rpCard" class="rp-card-input" placeholder="输入孩子卡密查看云端报告">'+
+            '<button class="rp-btn" id="rpSync">☁️ 同步学习数据到后端</button><button class="rp-btn ghost" id="rpCloud">📥 从云端查看</button>'
           : '<div class="rp-note">未配置后端地址（CONFIG.apiBase 为空），当前展示本机数据。配置后学习数据会自动同步到您刚搭的后端，家长可跨设备查看。</div>')+
       '</div>'+
       '<div class="rp-grid">'+rp("⭐ 收集星数",s.stars)+rp("🏅 当前段位",s.rank)+rp("🔥 连续天数",s.streak)+
@@ -436,14 +437,23 @@
   function syncLearning(){
     if(!CONFIG.apiBase)return;
     try{
-      var payload={stars:totalStars(),units:state.units,wrong:state.wrong.length,events:state.events.slice(-50),at:Date.now()};
-      fetch(CONFIG.apiBase.replace(/\/$/,"")+"/learning/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).catch(function(){});
+      if(!state.dev){ state.dev="D"+Math.random().toString(36).slice(2,12); save(); }
+      var payload={
+        card:(state.activeCard&&state.activeCard!=="@master")?state.activeCard:null,
+        dev:state.dev,
+        stars:totalStars(), avg:computeStats().avg, wrong:state.wrong.length,
+        units:Object.keys(state.units).map(function(k){return {name:k,best:state.units[k].best||0};}),
+        at:Date.now()
+      };
+      fetch(CONFIG.apiBase.replace(/\/$/,"")+"/api/learning/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).catch(function(){});
     }catch(e){}
   }
   function loadCloudReport(body){
     if(!CONFIG.apiBase)return;
+    var card=($("#rpCard")?($("#rpCard").value||"").trim():"");
+    if(!card){ body.innerHTML='<p class="info-tip">请先在上方输入框填入孩子的卡密，再点「从云端查看」。</p>'; return; }
     body.innerHTML='<p class="info-tip">正在从云端拉取家长视图…</p>';
-    fetch(CONFIG.apiBase.replace(/\/$/,"")+"/learning/report").then(function(r){return r.json();}).then(function(d){
+    fetch(CONFIG.apiBase.replace(/\/$/,"")+"/api/learning/report?card="+encodeURIComponent(card.toUpperCase())).then(function(r){return r.json();}).then(function(d){
       var html='<div class="rp-cloud"><div class="rp-h">☁️ 云端学习概况</div><div class="rp-grid">';
       if(d&&typeof d==="object"){
         if(d.stars!=null)html+=rp("⭐ 星数",d.stars);
