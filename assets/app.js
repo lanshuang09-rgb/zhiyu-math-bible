@@ -187,9 +187,32 @@
     renderPanel(tab,u,grade);
   }
 
+  // 思维导图分支色板（活泼、区分度高，不依赖年级主色）
+  var MM_COLORS=["#FF8A5B","#26B587","#4A90E2","#9B5DE5","#F4B400","#FF6F91"];
+  function renderMindmap(u){
+    var m=u.mindmap;
+    if(!m) return '<div class="panel"><p style="color:#888">本单元暂未配置导图</p></div>';
+    if(typeof m==="string"){ return '<div class="panel mindmap">'+m.split("\n").map(function(s){return s.trim()?'<p>'+fmt(s)+'</p>':'';}).join("")+'</div>'; }
+    var cols=(m.b||[]).map(function(br,bi){
+      var c=MM_COLORS[bi%MM_COLORS.length];
+      var col='<div class="mm-branch" style="animation-delay:'+(bi*0.08)+'s">'
+        +'<div class="mm-spine" style="background:'+c+'"></div>'
+        +'<div class="mm-btitle" style="background:'+c+'">'+fmt(br.t)+'</div>'
+        +'<div class="mm-leaves">';
+      (br.k||[]).forEach(function(k){
+        col+='<div class="mm-leaf"><span class="mm-dot" style="background:'+c+'"></span>'+fmt(k)+'</div>';
+      });
+      return col+'</div></div>';
+    }).join("");
+    return '<div class="mm-wrap"><div class="mm">'
+      +'<div class="mm-center">'+fmt(m.c)+'</div>'
+      +'<div class="mm-drop"></div>'
+      +'<div class="mm-tree">'+cols+'</div>'
+      +'</div><div class="mm-hint">🧠 导图中心是单元主题，向下列是核心知识点与要点</div></div>';
+  }
   function renderPanel(tab,u,grade){
     var p=$("#panel");
-    if(tab==="mindmap"){ p.innerHTML='<div class="panel mindmap">'+u.mindmap.split("\n").map(function(s){return s.trim()?'<p>'+fmt(s)+'</p>':'';}).join("")+'</div>'; }
+    if(tab==="mindmap"){ p.innerHTML='<div class="panel mindmap">'+renderMindmap(u)+'</div>'; }
     else if(tab==="cards"){
       var ci=state["_fc_"+u.id]||0, c=u.cards[ci]||{q:"（暂无闪卡）",a:""};
       p.innerHTML='<div class="flashcard" id="fc"><div class="fc-inner"><div class="fc-face fc-front"><div class="fc-emoji">'+(c.scene||u.icon||"✨")+'</div><div class="fc-q">'+fmt(c.q)+'</div><div class="fc-hint">👇 点击卡片翻看解析</div></div>'+
