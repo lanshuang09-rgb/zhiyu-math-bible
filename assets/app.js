@@ -306,7 +306,8 @@
       '<div class="pp-flag">苏州名校 · 单元真题风格</div>'+
       '<h2 class="pp-title">'+u.title.replace(/^第.+单元 · /,"")+'<small>单元测试卷</small></h2>'+
       '<div class="pp-sub">苏教版 · 贴合苏州考情</div>'+
-      '<div class="pp-meta"><span>📝 '+items.length+' 题</span><span>⏱ 建议 40 分钟</span><span>💯 满分 100</span></div>'+
+      '<div class="pp-meta"><span>📝 共 '+items.length+' 题</span><span>⏱ 建议 '+Math.max(20,items.length*2)+' 分钟</span><span>💯 满分 100</span></div>'+
+      '<div class="pp-score-tip">评分：每题 '+(100/items.length).toFixed(1).replace(/\.0$/,'')+' 分 · 做错自动进错题本</div>'+
       '<div class="pp-sec-box">'+secList+'</div>'+
       '<button class="pp-start" id="ppStart">🔔 开考！</button>'+
       '<div class="pp-tip">做完自动按大题给分，家长后台也能看到这份成绩</div>'+
