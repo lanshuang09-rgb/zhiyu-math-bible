@@ -10,9 +10,9 @@
     brand:"知予",
     groupQR:"assets/group-qr.png",
     groupPassword:"知予数学宝典",
-    // 卡密后端校验地址。留空 = 仅用本地混淆卡密（demo 用，非真安全）。
-    // 填入你的 serverless 地址后，解锁走后端：POST {apiBase}/api/card/verify  {card,grade} → {valid,master}
-    apiBase:"",
+    // 卡密后端校验地址（腾讯云开发 CloudBase，国内直连）。
+    // 解锁走后端：POST {apiBase}/api/card/verify  {card,grade} → {valid,master}
+    apiBase:"https://eldest-guineafowl-d5d6epdd103a07-1523303696.ap-shanghai.app.tcloudbase.com",
     // 本地混淆卡密（离线兜底 / demo 用）。正式生产以后端为准，可清空这两项。
     _cardsB64:"WyJaSElZVS0yMDI2IiwgIlNIVVhVRS1CSUJMRSIsICLnn6XkuojmlbDlrablrp3lhbgiXQ==",
     _masterB64:"WkhJWVUtVklQ"
