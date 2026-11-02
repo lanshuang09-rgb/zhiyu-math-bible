@@ -42,7 +42,7 @@
   }
 
   var KEY="zhiyu_math_v2", state=load();
-  function load(){ try{var s=JSON.parse(localStorage.getItem(KEY)); if(s&&typeof s==="object")return s;}catch(e){} return {units:{},cards:[],master:false,bestCombo:0,wrong:[],events:[]}; }
+  function load(){ try{var s=JSON.parse(localStorage.getItem(KEY)); if(s&&typeof s==="object")return s;}catch(e){} return {units:{},cards:[],master:false,bestCombo:0,wrong:[],events:[],kp:{}}; }
   function save(){ try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){} }
   function totalStars(){var s=0;for(var k in state.units)s+=state.units[k].stars||0;return s;}
   function rankOf(s){var r=0;for(var i=0;i<RANK_STAR.length;i++)if(s>=RANK_STAR[i])r=i;return r;}
@@ -85,12 +85,80 @@
 
   /* 埋点 + 错题本（localStorage，零后端） */
   function track(type,p){ try{var e=Object.assign({t:Date.now(),type:type},p||{}); state.events.push(e); if(state.events.length>300)state.events=state.events.slice(-300); save();}catch(e){} }
+  var EB_STAGE=[1,3,7,15];   /* 艾宾浩斯复习间隔（天） */
   function recordWrong(q,ans,u,grade){
-    var entry={g:grade,u:u.id,type:q.type,options:q.options,q:q.q,key:q.key,ans:ans,a:q.a||"",scene:q.scene,t:Date.now()};
+    var entry={g:grade,u:u.id,type:q.type,options:q.options,q:q.q,key:q.key,ans:ans,a:q.a||"",scene:q.scene,
+      tag:q.tag||"",why:"",stage:0,due:Date.now()+EB_STAGE[0]*864e5,t:Date.now()};
     state.wrong=state.wrong.filter(function(w){return w.q!==q.q;});
     state.wrong.push(entry);
     if(state.wrong.length>200)state.wrong=state.wrong.slice(-200);
     save();
+  }
+
+  /* ========== 知识点掌握度（个性化诊断的地基）========== */
+  function recordKP(tag,right,u){
+    if(!tag||!u||String(u.id).indexOf("__")===0)return;   /* 复习/错题重做模式不污染单元画像 */
+    state.kp=state.kp||{};
+    var k=state.kp[u.id]||(state.kp[u.id]={});
+    var e=k[tag]||(k[tag]={r:0,w:0,t:0});
+    if(right)e.r++;else e.w++;
+    e.t=Date.now(); save();
+  }
+  function kpStat(u,tag){
+    var e=(state.kp&&state.kp[u.id]&&state.kp[u.id][tag])||null;
+    if(!e)return null;
+    var n=(e.r||0)+(e.w||0);
+    return {n:n,r:e.r||0,w:e.w||0,rate:n?Math.round(e.r/n*100):0,t:e.t||0,why:e.why||{}};
+  }
+  function kpOfUnit(u){
+    return (u.kps||[]).map(function(k){ return {k:k,s:kpStat(u,k)}; });
+  }
+  /* 薄弱知识点：测过且正确率 < 70% */
+  function weakKps(u){ return kpOfUnit(u).filter(function(x){ return x.s && x.s.n>=1 && x.s.rate<70; })
+    .sort(function(a,b){ return a.s.rate-b.s.rate; }); }
+  function untestedKps(u){ return kpOfUnit(u).filter(function(x){ return !x.s; }); }
+
+  /* ========== 错因四选一 ========== */
+  var REASONS=[["计算粗心","🧮"],["概念不清","📖"],["审题失误","🔍"],["方法不会","🧩"]];
+  function showReason(box,q,u,grade,next){
+    if(!box)return;
+    var wrap=document.createElement("div"); wrap.className="rsn-wrap";
+    wrap.innerHTML='<div class="rsn-tip">错在哪儿？点一下，记进你的薄弱档案</div>'+
+      REASONS.map(function(r){return '<button class="rsn-btn" data-r="'+r[0]+'">'+r[1]+'<span>'+r[0]+'</span></button>';}).join("");
+    box.appendChild(wrap);
+    Array.prototype.forEach.call(wrap.querySelectorAll(".rsn-btn"),function(b){
+      b.onclick=function(){
+        var why=b.getAttribute("data-r");
+        var w=state.wrong.filter(function(x){return x.q===q.q;})[0];
+        if(w){ w.why=why; save(); }
+        if(q.tag){ state.kp=state.kp||{}; var k=state.kp[u.id]||(state.kp[u.id]={});
+          var e=k[q.tag]||(k[q.tag]={r:0,w:0,t:0}); e.why=e.why||{};
+          e.why[why]=(e.why[why]||0)+1; save(); }
+        Array.prototype.forEach.call(wrap.querySelectorAll(".rsn-btn"),function(x){x.classList.remove("on");});
+        b.classList.add("on"); wrap.classList.add("done");
+        setTimeout(next,400);
+      };
+    });
+  }
+
+  /* ========== 艾宾浩斯复习队列 ========== */
+  function dueList(){ var now=Date.now(); return (state.wrong||[]).filter(function(w){ return !w.due||w.due<=now; }); }
+  function passReview(q){
+    var w=state.wrong.filter(function(x){return x.q===q.q;})[0];
+    if(!w)return;
+    w.stage=Math.min(3,(w.stage||0)+1);
+    if(w.stage>=3){ state.wrong=state.wrong.filter(function(x){return x.q!==q.q;}); }
+    else w.due=Date.now()+EB_STAGE[w.stage]*864e5;
+    save();
+  }
+  function failReview(q){
+    var w=state.wrong.filter(function(x){return x.q===q.q;})[0];
+    if(!w)return;
+    w.stage=0; w.due=Date.now()+EB_STAGE[0]*864e5; save();
+  }
+  function reviewItems(){
+    return dueList().map(function(w){ return {q:w.q,type:w.type,options:w.options,key:w.key,a:w.a,scene:w.scene,
+      tag:w.tag,sec:w.tag?"drill":"fill",_w:w}; });
   }
   function clearWrong(){ state.wrong=[]; save(); }
 
@@ -116,6 +184,30 @@
         '<button class="hero-cta" id="startBtn">🎮 免费体验第一单元</button>'+
         '<span class="hero-free">无需注册 · 打开即玩 · 完整版进群领卡密</span>'+
       '</section>'+
+      (function(){
+        var due=dueList();
+        if(!due.length)return '';
+        return '<div class="review-banner" id="rvBanner">'+
+          '<div class="rv-l"><span class="rv-ico">🔔</span><div><b>今天有 '+due.length+' 道错题该复习了</b>'+
+          '<small>按 1/3/7/15 天间隔安排，连过 4 关就毕业</small></div></div>'+
+          '<button class="rv-btn" id="rvGo">开始复习 →</button></div>';
+      })()+
+      (function(){
+        var weakAll=[];
+        [1,2,3,4,5,6].forEach(function(g){
+          var G=window.GRADE_DATA[g]; if(!G)return;
+          G.units.forEach(function(u){
+            weakKps(u).forEach(function(x){ weakAll.push({g:g,u:u,k:x.k,rate:x.s.rate}); });
+          });
+        });
+        if(!weakAll.length)return '';
+        weakAll.sort(function(a,b){return a.rate-b.rate;});
+        var w=weakAll[0], G=window.GRADE_DATA[w.g], u=G.units.filter(function(x){return x.id===w.u.id;})[0];
+        return '<div class="review-banner drill" id="wkBanner">'+
+          '<div class="rv-l"><span class="rv-ico">🎯</span><div><b>最该补的知识点：'+w.k+'（'+w.rate+'%）</b>'+
+          '<small>'+w.g+'年级 · '+String(u.title).replace(/^第.+单元 · /,"")+' · 已为你备好专项变式题</small></div></div>'+
+          '<button class="rv-btn ghost" id="wkGo">去专项 →</button></div>';
+      })()+
       '<div class="value-grid">'+
         '<div class="value-card"><div class="vc-ico">🃏</div><div class="vc-t">闪卡翻转</div><div class="vc-d">点卡翻面看解析，记忆更牢</div></div>'+
         '<div class="value-card"><div class="vc-ico">⚔️</div><div class="vc-t">连击段位</div><div class="vc-d">COMBO 连对上瘾，晋级撒花</div></div>'+
@@ -127,6 +219,18 @@
       '<button class="hero-cta" id="allGradesBtn" style="background:#fff;color:var(--brand-d);border:2px solid var(--brand)">查看全部年级 →</button>';
     $("#startBtn").onclick=function(){go({name:"units",grade:1});};
     $("#allGradesBtn").onclick=function(){go({name:"grades"});};
+    var rvg=$("#rvGo"); if(rvg) rvg.onclick=function(){ openWrongbook(); };
+    var wkg=$("#wkGo"); if(wkg) wkg.onclick=function(){
+      var weakAll=[];
+      [1,2,3,4,5,6].forEach(function(g){
+        var G=window.GRADE_DATA[g]; if(!G)return;
+        G.units.forEach(function(u){ weakKps(u).forEach(function(x){ weakAll.push({g:g,u:u,k:x.k,rate:x.s.rate}); }); });
+      });
+      if(!weakAll.length)return;
+      weakAll.sort(function(a,b){return a.rate-b.rate;});
+      var w=weakAll[0];
+      go({name:"units",grade:w.g,unit:w.u.id,tab:"drill"});
+    };
   }
 
   function renderGrades(){
@@ -179,7 +283,7 @@
     applyAccent(grade);
     var g=window.GRADE_DATA[grade], u=g.units.filter(function(x){return x.id===unitId;})[0];
     if(!u||!isUnlocked(grade,unitId))return openUnlock(grade);
-    var tabs=[["mindmap","导图"],["cards","闪卡"],["challenge","闯关"],["boss","Boss"],["rand","随机练"],["life","🏠生活"],["pits","⚠️避坑"],["test","📝苏州卷"]];
+    var tabs=[["mindmap","导图"],["cards","闪卡"],["challenge","闯关"],["boss","Boss"],["rand","随机练"],["life","🏠生活"],["pits","⚠️避坑"],["test","📝苏州卷"],["drill","🎯专项"]];
     var th='<div class="tabs">'; tabs.forEach(function(t){th+='<div class="tab'+(t[0]===tab?" on":"")+'" data-t="'+t[0]+'">'+t[1]+'</div>';}); th+='</div>';
     view.innerHTML='<button class="back-btn" id="bk">← 单元</button>'+th+'<div id="panel"></div>';
     $("#bk").onclick=function(){go({name:"units",grade:grade});};
@@ -271,6 +375,7 @@
     else if(tab==="boss"){ if(u.boss&&u.boss.q){ startQuiz(p,[u.boss],"Boss挑战",u,grade,false,u.boss.reward); } else { p.innerHTML='<div class="panel">本单元暂未开放 Boss 挑战，先去闯关练手 👊</div>'; } }
     else if(tab==="rand"){ var pool=(u.challenge||[]).concat(u.test||[]); if(!pool.length){p.innerHTML='<div class="panel">题目整理中，进群抢先获取 👇</div>';return;} startQuiz(p,pool,"随机组卷",u,grade,true); }
     else if(tab==="test"){ startPaper(p,u,grade); }
+    else if(tab==="drill"){ renderDrill(p,u,grade); }
   }
 
   /* 答题引擎（支持 choice / judge / blank；填空容错；Boss徽章） */
@@ -288,6 +393,148 @@
     if(q.sec) return q.sec;
     return q.type==="choice"?"choice":(q.type==="judge"?"judge":"fill");
   }
+  /* ============ 🎯专项训练：知识点雷达 + 薄弱点变式训练包 ============ */
+  function radarSVG(list){
+    var n=list.length; if(n<3)return "";
+    var cx=110, cy=102, R=74, grid="";
+    [0.25,0.5,0.75,1].forEach(function(f){
+      var d=[];
+      for(var i=0;i<n;i++){ var a=-Math.PI/2+i*2*Math.PI/n;
+        d.push((cx+R*f*Math.cos(a)).toFixed(1)+","+(cy+R*f*Math.sin(a)).toFixed(1)); }
+      grid+='<polygon points="'+d.join(" ")+'" fill="none" stroke="var(--line)" stroke-width="0.6"/>';
+    });
+    var axes="",poly=[],dots="",labels="";
+    for(var i=0;i<n;i++){
+      var a=-Math.PI/2+i*2*Math.PI/n;
+      axes+='<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+R*Math.cos(a)).toFixed(1)+'" y2="'+(cy+R*Math.sin(a)).toFixed(1)+'" stroke="var(--line)" stroke-width="0.6"/>';
+      var rate=list[i].rate, f=(rate==null?0:Math.max(10,rate))/100;
+      var px=cx+R*f*Math.cos(a), py=cy+R*f*Math.sin(a);
+      poly.push(px.toFixed(1)+","+py.toFixed(1));
+      var col=rate==null?"#B4B2A9":(rate>=80?"#2BB673":rate>=60?"#F5A623":"#E8554E");
+      dots+='<circle cx="'+px.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="3.4" fill="'+col+'"/>';
+      var lx=cx+(R+20)*Math.cos(a), ly=cy+(R+20)*Math.sin(a);
+      var an=Math.abs(Math.cos(a))<0.35?"middle":(Math.cos(a)>0?"start":"end");
+      var nm=list[i].k.length>5?list[i].k.slice(0,5)+"…":list[i].k;
+      labels+='<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="'+an+'" font-size="9.5" fill="var(--ink2)">'+nm+'</text>';
+      labels+='<text x="'+lx.toFixed(1)+'" y="'+(ly+11).toFixed(1)+'" text-anchor="'+an+'" font-size="10" font-weight="700" fill="'+col+'">'+(rate==null?"未测":rate+"%")+'</text>';
+    }
+    return '<svg viewBox="0 0 220 216" class="kp-radar">'+grid+axes+
+      '<polygon points="'+poly.join(" ")+'" fill="var(--a)" fill-opacity="0.16" stroke="var(--a)" stroke-width="1.6"/>'+dots+labels+'</svg>';
+  }
+
+  function renderDrill(panel,u,grade){
+    var kps=u.kps||[];
+    if(!kps.length){ panel.innerHTML='<div class="panel">本单元知识点整理中…</div>'; return; }
+    var list=kps.map(function(k){ var s=kpStat(u,k); return {k:k,rate:s?s.rate:null,s:s}; });
+    var tested=list.filter(function(x){return x.rate!==null;});
+    var weak=weakKps(u), unt=untestedKps(u);
+    var total=0,rightN=0;
+    tested.forEach(function(x){ total+=x.s.n; rightN+=x.s.r; });
+    var overall=total?Math.round(rightN/total*100):0;
+
+    var h='<div class="panel drill-panel">';
+    h+='<div class="drill-head">🎯 知识点诊断 · '+u.title.replace(/^第.+单元 · /,"")+'</div>';
+    h+='<div class="kp-radar-box">'+radarSVG(list)+'</div>';
+    h+='<div class="kp-overall">'+(total
+      ? ('已练 '+total+' 题 · 总掌握度 <b style="color:'+(overall>=80?"#2BB673":overall>=60?"#F5A623":"#E8554E")+'">'+overall+'%</b>')
+      : '还没测过这个单元 —— 先去「📝苏州卷」或「闯关」练一练，雷达图就会亮起来')+'</div>';
+    if(weak.length){
+      h+='<div class="kp-sec-title">🔴 薄弱知识点 · 建议优先补</div>';
+      h+=weak.map(function(x){
+        var why=x.s.why||{}, wk=Object.keys(why).sort(function(a,b){return why[b]-why[a];})[0];
+        return '<div class="kp-item weak"><div class="kp-item-l"><b>'+x.k+'</b><span>'+x.s.rate+'% · 错 '+x.s.w+' 次'+(wk?' · 常错：'+wk:'')+'</span></div><button class="kp-train" data-k="'+x.k+'">练它 →</button></div>';
+      }).join("");
+      h+='<button class="drill-all" id="drillAll">🔥 一键练全部薄弱点（'+weak.length+' 个知识点）</button>';
+    }
+    if(unt.length){
+      h+='<div class="kp-sec-title">⚪ 还没测过</div>';
+      h+=unt.map(function(x){
+        return '<div class="kp-item"><div class="kp-item-l"><b>'+x.k+'</b><span>暂无数据</span></div><button class="kp-train ghost" data-k="'+x.k+'">测一测 →</button></div>';
+      }).join("");
+    }
+    var ok=list.filter(function(x){return x.rate!==null&&x.rate>=70;});
+    if(ok.length){
+      h+='<div class="kp-sec-title">🟢 已掌握</div>';
+      h+=ok.map(function(x){return '<div class="kp-item ok"><div class="kp-item-l"><b>'+x.k+'</b><span>'+x.s.rate+'% · 练过 '+x.s.n+' 题</span></div></div>';}).join("");
+    }
+    h+='<div class="drill-tip">专项题是「同知识点变式题」——换数字换情境，不是把错题原样重做</div>';
+    h+='</div>';
+    panel.innerHTML=h;
+
+    Array.prototype.forEach.call(panel.querySelectorAll(".kp-train"),function(b){
+      b.onclick=function(){ startDrill(panel,u,grade,[b.getAttribute("data-k")]); };
+    });
+    var da=$("#drillAll");
+    if(da) da.onclick=function(){ startDrill(panel,u,grade,weak.map(function(x){return x.k;})); };
+  }
+
+  function startDrill(panel,u,grade,tags){
+    var items=[];
+    tags.forEach(function(k){
+      ((u.variants&&u.variants[k])||[]).forEach(function(q){ items.push(Object.assign({},q,{tag:k})); });
+      (u.test||[]).filter(function(q){return q.tag===k;}).slice(0,2).forEach(function(q){ items.push(Object.assign({},q,{tag:k})); });
+    });
+    if(!items.length){ panel.innerHTML='<div class="panel">这个知识点暂时还没有专项题</div>'; return; }
+    var idx=0,right=0;
+    function render(){
+      if(idx>=items.length)return done();
+      var q=items[idx], tag=q.tag, LETTERS=["A","B","C","D"], li=0, opts="";
+      if(q.type==="judge"){
+        opts='<button class="quiz-opt" data-o="对"><span class="opt-key">✅</span><span>对</span></button>'+
+             '<button class="quiz-opt" data-o="错"><span class="opt-key">❌</span><span>错</span></button>';
+      } else if(q.type==="choice"){
+        (q.options||[]).forEach(function(o){var L=LETTERS[li++];
+          opts+='<button class="quiz-opt" data-o="'+o.replace(/"/g,'&quot;')+'"><span class="opt-key">'+L+'</span><span>'+fmt(o)+'</span></button>';});
+      } else {
+        opts='<input class="quiz-input" id="blankAns" placeholder="💡 写下答案（带单位也行）"><button class="quiz-submit" id="blankSub">提交</button>';
+      }
+      panel.innerHTML='<div class="panel drill-paper">'+
+        '<div class="pp-progress"><i style="width:'+Math.round(idx/items.length*100)+'%"></i></div>'+
+        '<div class="drill-bar"><span>'+tag+'</span><span>'+(idx+1)+' / '+items.length+'</span></div>'+
+        '<div class="quiz-q">'+fmt(q.q)+'</div>'+opts+'<div class="quiz-feedback" id="fb"></div></div>';
+      var answered=false;
+      function judge(ok,btn){
+        if(answered)return; answered=true;
+        var fb=panel.querySelector("#fb"), moved=false;
+        function next(){ if(moved)return; moved=true; idx++; render(); }
+        if(ok){ right++; recordKP(tag,true,u);
+          state.wrong=state.wrong.filter(function(w){return w.q!==q.q;}); save();
+          if(btn)btn.classList.add("correct"); else{var i2=panel.querySelector(".quiz-input");if(i2)i2.style.borderColor="var(--ok)";}
+          fb.className="quiz-feedback good"; fb.innerHTML="🎉 答对啦！"+(q.a?("<br>"+fmt(q.a)):"");
+        } else { recordWrong(q,"",u,grade); recordKP(tag,false,u);
+          if(btn){btn.classList.add("wrong");Array.prototype.forEach.call(panel.querySelectorAll(".quiz-opt"),function(o){if(o.getAttribute("data-o")===q.key)o.classList.add("correct");});}
+          else{var i3=panel.querySelector(".quiz-input");if(i3)i3.style.borderColor="var(--bad)";}
+          fb.className="quiz-feedback badd"; fb.innerHTML="💪 正确答案："+fmt(q.key)+(q.a?("<br>"+fmt(q.a)):"");
+        }
+        fb.style.display="block";
+        if(!ok) showReason(fb,q,u,grade,next);
+        setTimeout(next, ok?1300:3000);
+      }
+      if(q.type==="blank"){
+        $("#blankSub").onclick=function(){ judge(normCompare($("#blankAns").value,q.key),null); };
+        var inp=$("#blankAns"); if(inp){inp.onkeydown=function(e){if(e.key==="Enter")$("#blankSub").click();};setTimeout(function(){try{inp.focus();}catch(e){}},50);}
+      } else {
+        Array.prototype.forEach.call(panel.querySelectorAll(".quiz-opt"),function(b){b.onclick=function(){judge(b.getAttribute("data-o")===q.key,b);};});
+      }
+    }
+    function done(){
+      var rate=Math.round(right/items.length*100);
+      track("drill_finish",{g:grade,u:u.id,rate:rate,tags:tags.join("|")});
+      var comment=rate>=80?"🎉 这个知识点补上了！雷达图已更新":rate>=50?"🌱 有进步，再来一轮就稳了":"💪 先回「导图」把概念捋一遍，再来练一轮";
+      panel.innerHTML='<div class="panel result"><div class="drill-head">专项训练完成</div>'+
+        '<div class="r-rate">'+rate+'<small>分</small></div>'+
+        '<div class="r-stars">'+starHTML(rate===100?3:rate>=60?2:rate>0?1:0)+'</div>'+
+        '<div class="pp-comment">'+comment+'</div>'+
+        '<button class="r-cta" id="dkBack">← 回到诊断</button>'+
+        '<button class="r-share" id="dkAgain">🔄 再练一轮</button></div>';
+      if(rate>=80)confetti();
+      $("#dkBack").onclick=function(){ renderDrill(panel,u,grade); };
+      $("#dkAgain").onclick=function(){ startDrill(panel,u,grade,tags); };
+      syncLearning();
+    }
+    render();
+  }
+
   function startPaper(panel,u,grade){
     var items=(u.test||[]).slice();
     if(!items.length){ panel.innerHTML='<div class="panel">试卷编制中，进群抢先获取 👇</div>'; return; }
@@ -339,17 +586,20 @@
         if(answered)return; answered=true;
         var userAns=q.type==="blank"?($("#blankAns")?$("#blankAns").value:""):(btn?btn.getAttribute("data-o"):"");
         var fb=panel.querySelector("#fb");
-        if(right){ secRight[sec]=(secRight[sec]||0)+1;
+        var moved=false;
+        function next(){ if(moved)return; moved=true; runQ(idx+1,secRight); }
+        if(right){ secRight[sec]=(secRight[sec]||0)+1; recordKP(q.tag,true,u);
           if(btn)btn.classList.add("correct"); else{var i2=panel.querySelector(".quiz-input");if(i2)i2.style.borderColor="var(--ok)";}
           fb.className="quiz-feedback good"; fb.innerHTML="🎉 答对啦！"+(q.a?("<br>"+fmt(q.a)):"");
         } else {
-          recordWrong(q,userAns,u,grade); track("wrong",{g:grade,u:u.id,label:"测试卷"});
+          recordWrong(q,userAns,u,grade); recordKP(q.tag,false,u); track("wrong",{g:grade,u:u.id,label:"测试卷",tag:q.tag||""});
           if(btn){btn.classList.add("wrong");Array.prototype.forEach.call(panel.querySelectorAll(".quiz-opt"),function(o){if(o.getAttribute("data-o")===q.key)o.classList.add("correct");});}
           else{var i3=panel.querySelector(".quiz-input");if(i3)i3.style.borderColor="var(--bad)";}
           fb.className="quiz-feedback badd"; fb.innerHTML="💪 正确答案："+fmt(q.key)+(q.a?("<br>"+fmt(q.a)):"");
         }
         fb.style.display="block";
-        setTimeout(function(){ runQ(idx+1,secRight); },1400);
+        if(!right) showReason(fb,q,u,grade,next);
+        setTimeout(next, right?1400:3000);
       }
       if(q.type==="blank"){
         $("#blankSub").onclick=function(){ judge(normCompare($("#blankAns").value,q.key),null); };
@@ -426,7 +676,9 @@
     function judge(right,btn,q,panel){
       var fb=panel.querySelector("#fb"),opts=panel.querySelectorAll(".quiz-opt");
       var userAns = q.type==="blank" ? (panel.querySelector("#blankAns")?panel.querySelector("#blankAns").value:"") : (btn?btn.getAttribute("data-o"):"");
-      if(right){ correct++;combo++; if(combo>maxCombo)maxCombo=combo;
+      var moved2=false;
+      function goNext(){ if(moved2)return; moved2=true; idx++; if(idx<items.length)render(); else finish(); }
+      if(right){ correct++;combo++; if(combo>maxCombo)maxCombo=combo; recordKP(q.tag,true,u); if(q._w)passReview(q._w);
         if(btn)btn.classList.add("correct"); else{var i=panel.querySelector(".quiz-input");if(i)i.style.borderColor="var(--ok)";}
         fb.className="quiz-feedback good";
         fb.innerHTML=combo>=3?"🔥 连击 ×"+combo+"！手感来了":"🎉 答对啦！"+(q.a?("<br>"+fmt(q.a)):"");
@@ -434,14 +686,15 @@
         if(maxCombo>state.bestCombo){ state.bestCombo=maxCombo; save(); showToast("🔥 新纪录！最长连击 "+maxCombo); }
         popCombo();
       } else { combo=0;
-        recordWrong(q,userAns,u,grade); track("wrong",{g:grade,u:u.id,label:label});
+        recordWrong(q,userAns,u,grade); recordKP(q.tag,false,u); if(q._w)failReview(q._w); track("wrong",{g:grade,u:u.id,label:label,tag:q.tag||""});
         if(btn){btn.classList.add("wrong");Array.prototype.forEach.call(opts,function(o){if(o.getAttribute("data-o")===q.key)o.classList.add("correct");});}
         else{var i=panel.querySelector(".quiz-input");if(i)i.style.borderColor="var(--bad)";}
         fb.className="quiz-feedback badd";
         fb.innerHTML="💪 别急，正确答案："+fmt(q.key)+(q.a?("<br>"+fmt(q.a)):"");
       }
       fb.style.display="block"; $("#comboNum").textContent=combo; popCombo();
-      setTimeout(function(){ idx++; if(idx<items.length)render(); else finish(); },1500);
+      if(!right) showReason(fb,q,u,grade,goNext);
+      setTimeout(goNext, right?1500:3000);
     }
     function popCombo(){ var n=$("#comboNum"); if(n){n.classList.remove("pop");void n.offsetWidth;n.classList.add("pop");} }
     function finish(){
@@ -517,30 +770,47 @@
   }
   /* 错题本 / 学习报告（localStorage，零后端） */
   function openWrongbook(){
-    var m=$("#infoModal"); m.hidden=false; $("#infoTitle").textContent="📕 我的错题本";
+    var m=$("#infoModal"); m.hidden=false; $("#infoTitle").textContent="📕 错题本 · 艾宾浩斯复习";
     var body=$("#infoBody");
     if(!state.wrong.length){ body.innerHTML='<p class="info-empty">还没有错题，去闯关练练手吧 💪</p>'; return; }
+    var due=dueList();
     var groups={};
     state.wrong.forEach(function(w){ var k=w.g+"年级·"+w.u; (groups[k]=groups[k]||[]).push(w); });
-    var html='<p class="info-tip">共 <b>'+state.wrong.length+'</b> 道错题（已去重），点「重做错题」逐个击破 👇</p>';
+    var html='<p class="info-tip">共 <b>'+state.wrong.length+'</b> 道错题，其中 <b>'+due.length+'</b> 道到了复习时间。系统按 <b>1 / 3 / 7 / 15 天</b> 自动安排复习，连过 4 关就彻底毕业 👇</p>';
     for(var k in groups){
       html+='<div class="wb-group"><div class="wb-gtitle">'+k+'</div>';
       groups[k].forEach(function(w){
-        html+='<div class="wb-item"><div class="wb-q">❓ '+fmt(w.q)+'</div>'+
-              '<div class="wb-ans">✅ 正确答案：'+fmt(w.key)+(w.a?'<br><span class="wb-a">'+fmt(w.a)+'</span>':'')+'</div>'+
-              (w.ans!==undefined&&w.ans!==""?'<div class="wb-my">✏️ 你的答案：'+fmt(w.ans)+'</div>':'')+'</div>';
+        var isDue=!w.due||w.due<=Date.now();
+        var stageTxt=["第1关 · 1天后","第2关 · 3天后","第3关 · 7天后","第4关 · 15天后"][Math.min(3,w.stage||0)];
+        html+='<div class="wb-item'+(isDue?' due':'')+'">'+
+          '<div class="wb-meta">'+
+            (isDue?'<span class="wb-due">🔔 今天该复习</span>':'<span class="wb-wait">⏳ '+Math.max(1,Math.ceil((w.due-Date.now())/864e5))+' 天后复习</span>')+
+            '<span class="wb-stage">'+stageTxt+'</span>'+
+            (w.tag?'<span class="wb-tag">'+w.tag+'</span>':'')+
+            (w.why?'<span class="wb-why">'+w.why+'</span>':'')+
+          '</div>'+
+          '<div class="wb-q">❓ '+fmt(w.q)+'</div>'+
+          '<div class="wb-ans">✅ 正确答案：'+fmt(w.key)+(w.a?'<br><span class="wb-a">'+fmt(w.a)+'</span>':'')+'</div>'+
+          (w.ans!==undefined&&w.ans!==""?'<div class="wb-my">✏️ 你的答案：'+fmt(w.ans)+'</div>':'')+'</div>';
       });
       html+='</div>';
     }
-    html+='<div class="info-actions"><button class="modal-submit" id="wbRedo">🔄 重做错题</button><button class="modal-ghost" id="wbClear">🗑 清空错题本</button></div>';
+    html+='<div class="info-actions">'+
+      (due.length?'<button class="modal-submit" id="wbRedo">🔔 复习到期错题（'+due.length+'）</button>':'<div class="wb-none">今天没有到期错题，明天再来 👍</div>')+
+      '<button class="modal-ghost" id="wbAll">🔄 全部重做一遍</button>'+
+      '<button class="modal-ghost" id="wbClear">🗑 清空错题本</button></div>';
     body.innerHTML=html;
-    $("#wbRedo").onclick=function(){
-      var g=state.wrong[0].g;
+    function runReview(list){
+      if(!list.length)return;
+      var g=list[0].g;
+      m.hidden=true;
       view.innerHTML='<button class="back-btn" id="wbBk">← 返回首页</button><div id="wbPanel"></div>';
       $("#wbBk").onclick=function(){go({name:"landing"});};
-      var items=state.wrong.map(function(w){return {type:w.type,scene:w.scene,q:w.q,key:w.key,options:w.options,a:w.a};});
-      startQuiz($("#wbPanel"), items, "错题重做", {id:"__wrong__"}, g, false);
-    };
+      var items=list.map(function(w){return {type:w.type,scene:w.scene,q:w.q,key:w.key,options:w.options,a:w.a,tag:w.tag,_w:w};});
+      startQuiz($("#wbPanel"), items, "错题复习", {id:"__review__"}, g, false);
+    }
+    var dr=$("#wbRedo"); if(dr) dr.onclick=function(){ runReview(due); };
+    $("#wbAll").onclick=function(){ runReview(state.wrong.slice()); };
     $("#wbClear").onclick=function(){ clearWrong(); openWrongbook(); };
   }
   /* 家长后台（localStorage 本地 + 可接后端同步/查看） */
@@ -560,6 +830,30 @@
       '<div class="rp-sec"><div class="rp-h">📈 各单元正确率（最佳）</div>'+s.unitBars+'</div>'+
       (s.badges.length?'<div class="rp-sec"><div class="rp-h">🏆 已得徽章</div><div class="rp-badges">'+s.badges.map(function(b){return '<span class="rp-badge">'+fmt(b)+'</span>';}).join("")+'</div></div>':'')+
       (s.weak.length?'<div class="rp-sec"><div class="rp-h">⚠️ 薄弱单元（最佳＜60%）</div><div class="rp-weak">'+s.weak.join("、")+'</div></div>':'<div class="rp-sec"><div class="rp-h">✨ 暂无明显薄弱点，保持！</div></div>')+
+      (function(){
+        var all=[];
+        [1,2,3,4,5,6].forEach(function(g){
+          var G=window.GRADE_DATA[g]; if(!G)return;
+          G.units.forEach(function(u){
+            (u.kps||[]).forEach(function(k){
+              var st=kpStat(u,k);
+              if(st&&st.n>=1&&st.rate<70) all.push({g:g,u:u.id,k:k,rate:st.rate,n:st.n,w:st.w});
+            });
+          });
+        });
+        if(!all.length) return '<div class="rp-sec"><div class="rp-h">🎯 知识点诊断</div><div class="rp-weak">还没有知识点数据 —— 让孩子做一份「📝苏州卷」，系统就会画出他的能力雷达</div></div>';
+        all.sort(function(a,b){return a.rate-b.rate;});
+        var top=all.slice(0,5);
+        var bars=top.map(function(x){
+          var col=x.rate>=60?"#F5A623":"#E8554E";
+          return '<div class="rp-bar"><span class="rp-bar-name">'+x.g+'年级·'+x.k+'</span><span class="rp-bar-track"><i style="width:'+x.rate+'%;background:'+col+'"></i></span><span class="rp-bar-val">'+x.rate+'%</span></div>';
+        }).join("");
+        var pres='本周主攻 <b>'+top[0].k+'</b>（正确率 '+top[0].rate+'%，错 '+top[0].w+' 次）。三步走：① 回「导图」把概念捋一遍 → ② 做「🎯专项」里的同知识点变式题 → ③ 几天后复习错题本。每天 15 分钟，周末再测一次。';
+        return '<div class="rp-sec"><div class="rp-h">🎯 知识点诊断（最需要补的 5 个）</div>'+bars+'</div>'+
+          '<div class="rp-sec"><div class="rp-h">💊 本周学习处方</div><div class="rp-pres">'+pres+'</div></div>';
+      })()+
+      (function(){ var d=dueList(); if(!d.length)return '';
+        return '<div class="rp-sec"><div class="rp-h">🔔 复习提醒</div><div class="rp-pres">今天有 <b>'+d.length+'</b> 道错题到了复习时间（按 1/3/7/15 天间隔自动安排）。打开错题本点「复习到期错题」即可。</div></div>'; })()+
       (s.lastT?'<div class="rp-foot">最近练习：'+new Date(s.lastT).toLocaleString("zh-CN")+'</div>':'<div class="rp-foot">还没有练习记录，去闯关试试～</div>');
     body.innerHTML=html;
     if(CONFIG.apiBase){
@@ -593,6 +887,20 @@
         dev:state.dev,
         stars:totalStars(), avg:computeStats().avg, wrong:state.wrong.length,
         units:Object.keys(state.units).map(function(k){return {name:k,best:state.units[k].best||0};}),
+        kp:(function(){
+          var out=[];
+          [1,2,3,4,5,6].forEach(function(g){
+            var G=window.GRADE_DATA[g]; if(!G)return;
+            G.units.forEach(function(u){
+              (u.kps||[]).forEach(function(k){
+                var st=kpStat(u,k);
+                if(st&&st.n>=1) out.push({u:u.id,k:k,rate:st.rate,n:st.n,w:st.w,why:st.why});
+              });
+            });
+          });
+          return out.sort(function(a,b){return a.rate-b.rate;}).slice(0,30);
+        })(),
+        due:dueList().length,
         at:Date.now()
       };
       fetch(CONFIG.apiBase.replace(/\/$/,"")+"/api/learning/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).catch(function(){});
