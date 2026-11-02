@@ -408,3 +408,63 @@ body::after{background:radial-gradient(circle,var(--al),transparent 70%);bottom:
 .pp-comment{margin-top:12px;padding:11px 13px;border-radius:12px;background:var(--al);color:var(--ad);
   font-size:13px;font-weight:700;line-height:1.6;text-align:left}
 .pp-score-tip{font-size:11.5px;color:var(--soft);margin:-6px 0 12px;font-weight:700}
+
+/* ============ 错因四选一 ============ */
+.rsn-wrap{margin-top:10px;padding:9px 10px;background:var(--al);border-radius:12px;animation:riseIn .25s both}
+.rsn-wrap.done{opacity:.6}
+.rsn-tip{font-size:11.5px;color:var(--ad);font-weight:700;margin-bottom:7px}
+.rsn-btn{display:inline-flex;align-items:center;gap:4px;border:1.5px solid rgba(0,0,0,.1);background:#fff;color:var(--ink);
+  border-radius:99px;padding:6px 12px;font-size:12px;font-weight:700;margin:3px 4px 0 0;cursor:pointer;transition:.15s}
+.rsn-btn:active{transform:scale(.94)}
+.rsn-btn.on{background:var(--a);color:#fff;border-color:var(--ad)}
+
+/* ============ 首页：复习 & 薄弱提醒横幅 ============ */
+.review-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:linear-gradient(135deg,#FFF4E5,#FFE9DD);border:1.5px solid #FFD9C2;border-radius:14px;
+  padding:11px 13px;margin:0 0 10px}
+.review-banner.drill{background:linear-gradient(135deg,#FDECEA,#FBDCD9);border-color:#F5C6C0}
+.rv-l{display:flex;align-items:center;gap:9px;min-width:0}
+.rv-ico{font-size:22px}
+.rv-l b{display:block;font-size:13.5px;font-weight:800;color:var(--ink)}
+.rv-l small{display:block;font-size:11px;color:var(--soft);margin-top:1px;line-height:1.4}
+.rv-btn{flex-shrink:0;border:none;border-radius:99px;padding:8px 14px;font-size:12.5px;font-weight:800;
+  background:var(--a);color:#fff;cursor:pointer}
+.rv-btn.ghost{background:#fff;color:var(--ad);border:1.5px solid var(--a)}
+
+/* ============ 🎯专项：知识点雷达 ============ */
+.drill-panel{padding-top:16px!important}
+.drill-head{font-size:15px;font-weight:900;color:var(--ink);margin-bottom:8px}
+.kp-radar-box{display:flex;justify-content:center;background:var(--al);border-radius:16px;padding:6px 0;margin-bottom:10px}
+.kp-radar{width:100%;max-width:260px;height:auto}
+.kp-overall{text-align:center;font-size:13px;color:var(--ink2);font-weight:700;margin-bottom:12px}
+.kp-overall b{font-size:15px}
+.kp-sec-title{font-size:12.5px;font-weight:900;color:var(--ink);margin:12px 0 6px}
+.kp-item{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--al);
+  border-radius:12px;padding:9px 11px;margin-bottom:6px}
+.kp-item.weak{background:#FDECEA;border-left:3px solid #E8554E}
+.kp-item.ok{background:#EAF6EF;border-left:3px solid #2BB673}
+.kp-item-l{min-width:0}
+.kp-item-l b{display:block;font-size:13px;font-weight:800;color:var(--ink)}
+.kp-item-l span{display:block;font-size:11px;color:var(--soft);margin-top:2px}
+.kp-train{flex-shrink:0;border:none;border-radius:99px;padding:7px 13px;font-size:12px;font-weight:800;
+  background:var(--a);color:#fff;cursor:pointer}
+.kp-train.ghost{background:#fff;color:var(--ad);border:1.5px solid var(--a)}
+.drill-all{width:100%;margin-top:10px;border:none;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
+  background:linear-gradient(135deg,var(--a),var(--ad));color:#fff;cursor:pointer}
+.drill-tip{font-size:11px;color:var(--soft);margin-top:9px;text-align:center;line-height:1.5}
+.drill-paper .drill-bar{display:flex;justify-content:space-between;font-size:12px;color:var(--ink2);font-weight:800;margin-bottom:10px}
+.drill-paper .drill-bar span:first-child{background:var(--al);color:var(--ad);border-radius:99px;padding:3px 10px}
+
+/* ============ 错题本：艾宾浩斯 ============ */
+.wb-item.due{background:#FFF8E8;border-left:3px solid #F5A623}
+.wb-meta{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px}
+.wb-meta span{font-size:10.5px;font-weight:800;border-radius:99px;padding:2px 8px}
+.wb-due{background:#FFE9DD;color:#B8530B}
+.wb-wait{background:var(--al);color:var(--soft)}
+.wb-stage{background:#E8F0FA;color:#3A6EA5}
+.wb-tag{background:#EFE6FB;color:#6E3FC0}
+.wb-why{background:#FDECEA;color:#B03024}
+.wb-none{font-size:12px;color:var(--soft);padding:6px 0}
+
+/* ============ 家长报告：处方 ============ */
+.rp-pres{font-size:12.5px;color:var(--ad);line-height:1.7;background:var(--al);border-radius:12px;padding:10px 12px}
