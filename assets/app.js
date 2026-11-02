@@ -179,7 +179,7 @@
     applyAccent(grade);
     var g=window.GRADE_DATA[grade], u=g.units.filter(function(x){return x.id===unitId;})[0];
     if(!u||!isUnlocked(grade,unitId))return openUnlock(grade);
-    var tabs=[["mindmap","导图"],["cards","闪卡"],["challenge","闯关"],["boss","Boss"],["rand","随机练"],["life","🏠生活"],["pits","⚠️避坑"],["test","测试卷"]];
+    var tabs=[["mindmap","导图"],["cards","闪卡"],["challenge","闯关"],["boss","Boss"],["rand","随机练"],["life","🏠生活"],["pits","⚠️避坑"],["test","📝苏州卷"]];
     var th='<div class="tabs">'; tabs.forEach(function(t){th+='<div class="tab'+(t[0]===tab?" on":"")+'" data-t="'+t[0]+'">'+t[1]+'</div>';}); th+='</div>';
     view.innerHTML='<button class="back-btn" id="bk">← 单元</button>'+th+'<div id="panel"></div>';
     $("#bk").onclick=function(){go({name:"units",grade:grade});};
@@ -213,14 +213,47 @@
   function renderPanel(tab,u,grade){
     var p=$("#panel");
     if(tab==="mindmap"){ p.innerHTML='<div class="panel mindmap">'+renderMindmap(u)+'</div>'; }
-    else if(tab==="cards"){
+    if(tab==="cards"){
+      // 闪卡多彩版：每张卡轮换专属渐变配色 + 记忆戳章玩法
+      var FC_THEMES=[
+        {bg:"linear-gradient(160deg,#FFF9E8 0%,#FFE3A3 100%)",badge:"#F5A623",ink:"#8A5A00",deco:"☀️"},
+        {bg:"linear-gradient(160deg,#E9FBEF 0%,#A8EFC5 100%)",badge:"#26B587",ink:"#0B6E45",deco:"🌿"},
+        {bg:"linear-gradient(160deg,#E8F3FE 0%,#A5D3FA 100%)",badge:"#4A90E2",ink:"#1B5FA8",deco:"💧"},
+        {bg:"linear-gradient(160deg,#F3EAFB 0%,#D3B8F5 100%)",badge:"#9B5DE5",ink:"#5B2BA6",deco:"🔮"},
+        {bg:"linear-gradient(160deg,#FDE8EF 0%,#F9B8CE 100%)",badge:"#FF6F91",ink:"#A8304F",deco:"🌸"},
+        {bg:"linear-gradient(160deg,#FFF0E5 0%,#FFC9A3 100%)",badge:"#FF8A5B",ink:"#A84E1B",deco:"🍊"}
+      ];
       var ci=state["_fc_"+u.id]||0, c=u.cards[ci]||{q:"（暂无闪卡）",a:""};
-      p.innerHTML='<div class="flashcard" id="fc"><div class="fc-inner"><div class="fc-face fc-front"><div class="fc-emoji">'+(c.scene||u.icon||"✨")+'</div><div class="fc-q">'+fmt(c.q)+'</div><div class="fc-hint">👇 点击卡片翻看解析</div></div>'+
-        '<div class="fc-face fc-back"><div class="fc-a">'+fmt(c.a)+'</div><div class="fc-hint">再点收回</div></div></div></div>'+
+      var th=FC_THEMES[ci%FC_THEMES.length];
+      var mem=state["_fcm_"+u.id]||[];                 // 记住的卡索引
+      var memCount=mem.filter(function(x){return x<u.cards.length;}).length;
+      var isMem=mem.indexOf(ci)>=0;
+      var dots="";for(var d=0;d<u.cards.length;d++)dots+='<i class="'+(d===ci?"on":"")+(mem.indexOf(d)>=0?" mem":"")+'"></i>';
+      p.innerHTML='<div class="fc-progress"><span>'+memCount+' / '+u.cards.length+' 已记住</span><span class="fc-dots">'+dots+'</span></div>'+
+        '<div class="flashcard" id="fc" style="--fcbg:'+th.bg+';--fcb:'+th.badge+';--fci:'+th.ink+'"><div class="fc-inner">'+
+        '<div class="fc-face fc-front"><span class="fc-deco">'+th.deco+'</span><div class="fc-emoji">'+(c.scene||u.icon||"✨")+'</div><div class="fc-q">'+fmt(c.q)+'</div>'+
+        (isMem?'<span class="fc-stamp">✅ 记牢</span>':'')+'<div class="fc-hint">👇 点卡片翻看解析</div></div>'+
+        '<div class="fc-face fc-back"><div class="fc-a">'+fmt(c.a)+'</div>'+
+        '<button class="fc-mem-btn" id="fcMem">'+(isMem?'💪 已记住，点取消':'✅ 我记住了！')+'</button>'+
+        '<div class="fc-hint">再点收回</div></div></div></div>'+
         '<div class="fc-nav"><button id="fcP">← 上一张</button><span id="fcI">'+(ci+1)+' / '+u.cards.length+'</span><button id="fcN">下一张 →</button></div>';
-      $("#fc").onclick=function(){this.classList.toggle("flipped");};
+      $("#fc").onclick=function(){this.classList.toggle("flipped");track("flip_card",{g:grade,u:u.id});};
       $("#fcP").onclick=function(e){e.stopPropagation();ci=(ci-1+u.cards.length)%u.cards.length;state["_fc_"+u.id]=ci;save();renderPanel("cards",u,grade);};
       $("#fcN").onclick=function(e){e.stopPropagation();ci=(ci+1)%u.cards.length;state["_fc_"+u.id]=ci;save();renderPanel("cards",u,grade);};
+      $("#fcMem").onclick=function(e){
+        e.stopPropagation();
+        mem=state["_fcm_"+u.id]||[];
+        var i=mem.indexOf(ci);
+        if(i>=0)mem.splice(i,1);
+        else{
+          mem.push(ci); track("mem_card",{g:grade,u:u.id});
+          if(mem.length>=u.cards.length){confetti();showToast("🎉 闪卡全部记牢，太厉害啦！");}
+          else showToast("✅ 已记住 "+mem.length+" / "+u.cards.length);
+        }
+        state["_fcm_"+u.id]=mem; save();
+        $("#fc").classList.remove("flipped");
+        renderPanel("cards",u,grade);
+      };
     }
     else if(tab==="life"){
       var lifeEmo=["🏠","🛒","🍎","⏰","📏","🧁","🚗","🍬"];
@@ -237,10 +270,126 @@
     else if(tab==="challenge"){ startQuiz(p,u.challenge,"闯关",u,grade,false); }
     else if(tab==="boss"){ if(u.boss&&u.boss.q){ startQuiz(p,[u.boss],"Boss挑战",u,grade,false,u.boss.reward); } else { p.innerHTML='<div class="panel">本单元暂未开放 Boss 挑战，先去闯关练手 👊</div>'; } }
     else if(tab==="rand"){ var pool=(u.challenge||[]).concat(u.test||[]); if(!pool.length){p.innerHTML='<div class="panel">题目整理中，进群抢先获取 👇</div>';return;} startQuiz(p,pool,"随机组卷",u,grade,true); }
-    else if(tab==="test"){ startQuiz(p,u.test,"测试卷",u,grade,false); }
+    else if(tab==="test"){ startPaper(p,u,grade); }
   }
 
   /* 答题引擎（支持 choice / judge / blank；填空容错；Boss徽章） */
+  /* ============ 苏州考情·单元测试卷引擎 ============
+   * 数据约定：题目可带 sec:"fill|choice|judge|solve"；无 sec 时按 type 推断。
+   * 体验：卷头封面 → 按大题分节作答 → 结算页按大题给分明细（贴苏州卷惯例）。
+   */
+  var PAPER_SECS=[
+    {k:"fill",  name:"一、填一填",   emo:"✏️"},
+    {k:"choice",name:"二、选一选",   emo:"🔤"},
+    {k:"judge", name:"三、辨一辨",   emo:"⚖️"},
+    {k:"solve", name:"四、解决问题", emo:"🧩"}
+  ];
+  function secOf(q){
+    if(q.sec) return q.sec;
+    return q.type==="choice"?"choice":(q.type==="judge"?"judge":"fill");
+  }
+  function startPaper(panel,u,grade){
+    var items=(u.test||[]).slice();
+    if(!items.length){ panel.innerHTML='<div class="panel">试卷编制中，进群抢先获取 👇</div>'; return; }
+    // 按大题顺序重排，同节保持原顺序
+    var ordered=[];
+    PAPER_SECS.forEach(function(s){ items.forEach(function(q){ if(secOf(q)===s.k)ordered.push(q); }); });
+    items.forEach(function(q){ if(secOf(q)==="solve"&&ordered.indexOf(q)<0)ordered.push(q); });
+    items=ordered;
+    var secCount={};
+    items.forEach(function(q){ secCount[secOf(q)]=(secCount[secOf(q)]||0)+1; });
+    var secs=PAPER_SECS.filter(function(s){ return secCount[s.k]; });
+
+    // —— 卷头封面 ——
+    var secList=secs.map(function(s){ return '<div class="pp-sec-line"><span>'+s.emo+' '+s.name+'</span><b>'+secCount[s.k]+' 题</b></div>'; }).join("");
+    panel.innerHTML='<div class="panel pp-cover">'+
+      '<div class="pp-flag">苏州名校 · 单元真题风格</div>'+
+      '<h2 class="pp-title">'+u.title.replace(/^第.+单元 · /,"")+'<small>单元测试卷</small></h2>'+
+      '<div class="pp-sub">苏教版 · 贴合苏州考情</div>'+
+      '<div class="pp-meta"><span>📝 '+items.length+' 题</span><span>⏱ 建议 40 分钟</span><span>💯 满分 100</span></div>'+
+      '<div class="pp-sec-box">'+secList+'</div>'+
+      '<button class="pp-start" id="ppStart">🔔 开考！</button>'+
+      '<div class="pp-tip">做完自动按大题给分，家长后台也能看到这份成绩</div>'+
+      '</div>';
+    $("#ppStart").onclick=function(){ runQ(0,{}); };
+
+    function runQ(idx,secRight){
+      if(idx>=items.length) return paperDone(secRight);
+      var q=items[idx], sec=secOf(q), sdef=PAPER_SECS.filter(function(s){return s.k===sec;})[0]||PAPER_SECS[0];
+      var secIdx=items.slice(0,idx+1).filter(function(x){return secOf(x)===sec;}).length;
+      var secHead=(secIdx===1)?'<div class="pp-sec-head">'+sdef.emo+' '+sdef.name+'<small>'+secCount[sec]+' 题</small></div>':"";
+      var LETTERS=["A","B","C","D"], li=0, opts="";
+      if(q.type==="judge"){
+        opts='<button class="quiz-opt" data-o="对"><span class="opt-key">✅</span><span>对</span></button>'+
+             '<button class="quiz-opt" data-o="错"><span class="opt-key">❌</span><span>错</span></button>';
+      } else if(q.type==="choice"){
+        (q.options||[]).forEach(function(o){var L=LETTERS[li++];opts+='<button class="quiz-opt" data-o="'+o.replace(/"/g,'&quot;')+'"><span class="opt-key">'+L+'</span><span>'+fmt(o)+'</span></button>';});
+      } else {
+        opts='<input class="quiz-input" id="blankAns" placeholder="💡 写下答案（带单位也行）"><button class="quiz-submit" id="blankSub">提交</button>';
+      }
+      panel.innerHTML='<div class="panel pp-paper">'+
+        '<div class="pp-progress"><i style="width:'+Math.round(idx/items.length*100)+'%"></i></div>'+
+        '<div class="pp-bar"><span>'+sdef.name.split("、")[0]+' · 第'+(idx+1)+'题 / 共'+items.length+'题</span><span>苏州卷</span></div>'+
+        secHead+
+        '<div class="quiz-scene">'+sceneHTML(q.scene||sdef.emo)+'</div>'+
+        '<div class="quiz-q">'+fmt(q.q)+'</div>'+opts+'<div class="quiz-feedback" id="fb"></div></div>';
+      var answered=false;
+      function judge(right,btn){
+        if(answered)return; answered=true;
+        var userAns=q.type==="blank"?($("#blankAns")?$("#blankAns").value:""):(btn?btn.getAttribute("data-o"):"");
+        var fb=panel.querySelector("#fb");
+        if(right){ secRight[sec]=(secRight[sec]||0)+1;
+          if(btn)btn.classList.add("correct"); else{var i2=panel.querySelector(".quiz-input");if(i2)i2.style.borderColor="var(--ok)";}
+          fb.className="quiz-feedback good"; fb.innerHTML="🎉 答对啦！"+(q.a?("<br>"+fmt(q.a)):"");
+        } else {
+          recordWrong(q,userAns,u,grade); track("wrong",{g:grade,u:u.id,label:"测试卷"});
+          if(btn){btn.classList.add("wrong");Array.prototype.forEach.call(panel.querySelectorAll(".quiz-opt"),function(o){if(o.getAttribute("data-o")===q.key)o.classList.add("correct");});}
+          else{var i3=panel.querySelector(".quiz-input");if(i3)i3.style.borderColor="var(--bad)";}
+          fb.className="quiz-feedback badd"; fb.innerHTML="💪 正确答案："+fmt(q.key)+(q.a?("<br>"+fmt(q.a)):"");
+        }
+        fb.style.display="block";
+        setTimeout(function(){ runQ(idx+1,secRight); },1400);
+      }
+      if(q.type==="blank"){
+        $("#blankSub").onclick=function(){ judge(normCompare($("#blankAns").value,q.key),null); };
+        var inp=$("#blankAns"); if(inp){inp.onkeydown=function(e){if(e.key==="Enter")$("#blankSub").click();};setTimeout(function(){try{inp.focus();}catch(e){}},50);}
+      } else {
+        Array.prototype.forEach.call(panel.querySelectorAll(".quiz-opt"),function(b){b.onclick=function(){judge(b.getAttribute("data-o")===q.key,b);};});
+      }
+    }
+
+    function paperDone(secRight){
+      var rightN=0; secs.forEach(function(s){ rightN+=secRight[s.k]||0; });
+      var score=Math.round(rightN/items.length*100);
+      var stars=score===100?3:score>=60?2:score>0?1:0;
+      track("paper_finish",{g:grade,u:u.id,score:score});
+      var rec=state.units[u.id]||{stars:0,best:0};
+      rec.stars=Math.max(rec.stars,stars); rec.best=Math.max(rec.best||0,score); state.units[u.id]=rec; save(); syncLearning();
+      var detail=secs.map(function(s){
+        var got=secRight[s.k]||0, tot=secCount[s.k];
+        var pct=tot?Math.round(got/tot*100):0;
+        var col=pct>=80?"#2BB673":pct>=60?"#F5A623":"#E8554E";
+        return '<div class="rp-bar"><span class="rp-bar-name">'+s.emo+' '+s.name+'</span><span class="rp-bar-track"><i style="width:'+pct+'%;background:'+col+'"></i></span><span class="rp-bar-val">'+got+'/'+tot+'</span></div>';
+      }).join("");
+      var comment=score>=90?"🏆 苏州卷水准！这单元稳了，可以提前攻下一单元"
+        :score>=75?"😎 扎实！把错题本里这单元的题重做一遍就满分"
+        :score>=60?"🌱 过关，但丢分不少——重点刷「闯关」和「Boss」补弱"
+        :"💪 别灰心，先回「导图」捋一遍知识点，再来二刷这份卷子";
+      panel.innerHTML='<div class="panel result pp-result">'+
+        '<div class="pp-flag">苏州名校 · 单元真题风格</div>'+
+        '<div class="r-rank">'+u.title.replace(/^第.+单元 · /,"")+'· 测试完成</div>'+
+        '<div class="r-rate">'+score+'<small>分</small></div>'+
+        '<div class="r-stars">'+starHTML(stars)+'</div>'+
+        '<div class="pp-detail-title">📋 各大题得分</div>'+detail+
+        '<div class="pp-comment">'+comment+'</div>'+
+        '<button class="r-cta" id="ppRetry">🔄 二刷这份卷子</button>'+
+        '<button class="r-share" id="ppBack">← 回到单元</button></div>';
+      if(score>=90)confetti();
+      $("#ppRetry").onclick=function(){ runQ(0,{}); };
+      $("#ppBack").onclick=function(){ go({name:"units",grade:grade}); };
+    }
+  }
+
   function startQuiz(panel,items,label,u,grade,isAI,badge){
     items=items||[];
     if(!items.length){ panel.innerHTML='<div class="panel">该模块题目整理中，进群抢先获取 👇</div>'; return; }
