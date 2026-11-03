@@ -141,6 +141,80 @@
     });
   }
 
+  /* ========== AI 老师讲解：预生成讲解秒开 + 追问接真AI ========== */
+  var _autoT=null, _autoFn=null;
+  function scheduleNext(fn,delay){ _autoFn=fn; if(_autoT)clearTimeout(_autoT); _autoT=setTimeout(function(){var f=_autoFn;_autoFn=null;_autoT=null;if(f)f();},delay); }
+  function cancelAuto(){ if(_autoT){clearTimeout(_autoT);_autoT=null;} }
+  function resumeAuto(){ if(_autoFn){var f=_autoFn;_autoFn=null;f();} }
+
+  function expOf(q){ if(!q)return""; return q.exp||((window.QEXP&&window.QEXP[q.q])||""); }
+  function expTokens(s){
+    var out=[],i=0;
+    while(i<s.length){ if(s[i]==="<"){var j=s.indexOf(">",i); if(j<0){out.push(s.slice(i));break;} out.push(s.slice(i,j+1)); i=j+1;} else {out.push(s[i]);i++;} }
+    return out;
+  }
+  function typeOut(el,text){
+    el.innerHTML="";
+    var span=document.createElement("span"); span.className="exp-type cursor"; el.appendChild(span);
+    var toks=expTokens(fmt(text)), i=0;
+    if(el._t)clearInterval(el._t);
+    el._t=setInterval(function(){
+      if(i>=toks.length){ clearInterval(el._t); el._t=null; span.classList.remove("cursor"); return; }
+      span.innerHTML+=toks[i++];
+    },26);
+  }
+  function addExpBtn(fb,q,ctx){
+    if(!fb||!q||!q.q)return;
+    var b=document.createElement("button");
+    b.className="exp-btn";
+    b.innerHTML="💡 AI老师讲一讲";
+    b.onclick=function(ev){ ev.stopPropagation(); openExplain(q,ctx||{}); };
+    fb.appendChild(b);
+  }
+
+  var _expCtx=null;
+  function openExplain(q,ctx){
+    var m=$("#expModal"); if(!m)return;
+    cancelAuto();
+    _expCtx=Object.assign({q:q},ctx||{});
+    m.hidden=false;
+    $("#expQ").innerHTML='<div class="exp-q-text">'+fmt(q.q||"")+'</div>'+
+      (q.key?'<div class="exp-q-key">✅ 正确答案：'+fmt(String(q.key))+'</div>':'');
+    var body=$("#expBody"), chat=$("#expChat");
+    chat.innerHTML=""; chat.style.display="none";
+    var text=expOf(q);
+    if(text) typeOut(body,text);
+    else body.innerHTML='<div class="exp-none">老师还没备好这题的讲解，直接在下面问老师吧 👇</div>';
+    $("#expAsk").value="";
+    setTimeout(function(){ try{$("#expAsk").focus();}catch(e){} },350);
+  }
+  function askAI(){
+    var inp=$("#expAsk"), ask=(inp&&inp.value||"").trim();
+    if(!ask)return;
+    var chat=$("#expChat"); chat.style.display="block";
+    chat.insertAdjacentHTML("beforeend",'<div class="aiq me">'+fmt(ask)+'</div>');
+    inp.value="";
+    chat.insertAdjacentHTML("beforeend",'<div class="aiq ai thinking" id="aiThinking">🧠 老师正在想…</div>');
+    chat.scrollTop=chat.scrollHeight;
+    var q=(_expCtx&&_expCtx.q)||{};
+    var payload={q:q.q||"",key:String(q.key||""),a:q.a||"",exp:expOf(q),ask:ask,
+      grade:(_expCtx&&_expCtx.grade)||null,unit:(_expCtx&&_expCtx.u&&_expCtx.u.id)||(_expCtx&&_expCtx.unit)||"",
+      userAns:(_expCtx&&_expCtx.userAns)||"",
+      card:(state.activeCard&&state.activeCard!=="@master")?state.activeCard:null,dev:state.dev};
+    fetch((CONFIG.apiBase||"").replace(/\/$/,"")+"/api/ai/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var el=$("#aiThinking");
+        var ans=(d&&d.ok)?String(d.answer||""):"😥 "+((d&&(d.reason||d.msg))||"AI老师这会儿不在，先看上面的讲解，也可以把问题带给爸爸妈妈～");
+        if(el){el.className="aiq ai";el.innerHTML=fmt(ans);}else{chat.insertAdjacentHTML("beforeend",'<div class="aiq ai">'+fmt(ans)+'</div>');}
+        chat.scrollTop=chat.scrollHeight;
+      })
+      .catch(function(){
+        var el=$("#aiThinking");
+        if(el){el.className="aiq ai";el.innerHTML="😥 网络开小差了，稍后再试～";}
+      });
+  }
+
   /* ========== 艾宾浩斯复习队列 ========== */
   function dueList(){ var now=Date.now(); return (state.wrong||[]).filter(function(w){ return !w.due||w.due<=now; }); }
   function passReview(q){
@@ -507,8 +581,9 @@
           fb.className="quiz-feedback badd"; fb.innerHTML="💪 正确答案："+fmt(q.key)+(q.a?("<br>"+fmt(q.a)):"");
         }
         fb.style.display="block";
+        addExpBtn(fb,q,{grade:grade,u:u});
         if(!ok) showReason(fb,q,u,grade,next);
-        setTimeout(next, ok?1300:3000);
+        scheduleNext(next, ok?1300:3000);
       }
       if(q.type==="blank"){
         $("#blankSub").onclick=function(){ judge(normCompare($("#blankAns").value,q.key),null); };
@@ -598,8 +673,9 @@
           fb.className="quiz-feedback badd"; fb.innerHTML="💪 正确答案："+fmt(q.key)+(q.a?("<br>"+fmt(q.a)):"");
         }
         fb.style.display="block";
+        addExpBtn(fb,q,{grade:grade,u:u,userAns:userAns});
         if(!right) showReason(fb,q,u,grade,next);
-        setTimeout(next, right?1400:3000);
+        scheduleNext(next, right?1400:3000);
       }
       if(q.type==="blank"){
         $("#blankSub").onclick=function(){ judge(normCompare($("#blankAns").value,q.key),null); };
@@ -693,8 +769,9 @@
         fb.innerHTML="💪 别急，正确答案："+fmt(q.key)+(q.a?("<br>"+fmt(q.a)):"");
       }
       fb.style.display="block"; $("#comboNum").textContent=combo; popCombo();
+      addExpBtn(fb,q,{grade:grade,u:u,userAns:userAns});
       if(!right) showReason(fb,q,u,grade,goNext);
-      setTimeout(goNext, right?1500:3000);
+      scheduleNext(goNext, right?1500:3000);
     }
     function popCombo(){ var n=$("#comboNum"); if(n){n.classList.remove("pop");void n.offsetWidth;n.classList.add("pop");} }
     function finish(){
@@ -791,7 +868,8 @@
           '</div>'+
           '<div class="wb-q">❓ '+fmt(w.q)+'</div>'+
           '<div class="wb-ans">✅ 正确答案：'+fmt(w.key)+(w.a?'<br><span class="wb-a">'+fmt(w.a)+'</span>':'')+'</div>'+
-          (w.ans!==undefined&&w.ans!==""?'<div class="wb-my">✏️ 你的答案：'+fmt(w.ans)+'</div>':'')+'</div>';
+          (w.ans!==undefined&&w.ans!==""?'<div class="wb-my">✏️ 你的答案：'+fmt(w.ans)+'</div>':'')+
+          '<button class="wb-exp" data-i="'+state.wrong.indexOf(w)+'">💡 AI老师讲一讲</button></div>';
       });
       html+='</div>';
     }
@@ -812,6 +890,13 @@
     var dr=$("#wbRedo"); if(dr) dr.onclick=function(){ runReview(due); };
     $("#wbAll").onclick=function(){ runReview(state.wrong.slice()); };
     $("#wbClear").onclick=function(){ clearWrong(); openWrongbook(); };
+    Array.prototype.forEach.call(body.querySelectorAll(".wb-exp"),function(b){
+      b.onclick=function(ev){
+        ev.stopPropagation();
+        var w=state.wrong[+b.getAttribute("data-i")];
+        if(w) openExplain({q:w.q,key:w.key,a:w.a},{grade:w.g,unit:w.u,userAns:w.ans||""});
+      };
+    });
   }
   /* 家长后台（localStorage 本地 + 可接后端同步/查看） */
   function openReport(){
@@ -931,6 +1016,9 @@
   $("#btnWrong").onclick=function(){openWrongbook();};
   $("#btnReport").onclick=function(){openReport();};
   $("#infoClose").onclick=function(){$("#infoModal").hidden=true;};
+  $("#expClose").onclick=function(){ $("#expModal").hidden=true; resumeAuto(); };
+  $("#expSend").onclick=function(){ askAI(); };
+  var _expInp=$("#expAsk"); if(_expInp)_expInp.onkeydown=function(e){if(e.key==="Enter")askAI();};
 
   /* 顶栏 / 横幅 / toast */
   function updateTop(stars,rank,streak){ $("#streakNum").textContent=streak; $("#rankBadge").textContent=rank; }
