@@ -71,6 +71,22 @@
     </div>
   </div>
 
+  <!-- AI 老师讲解（预生成讲解 + 实时追问） -->
+  <div class="modal-mask" id="expModal" hidden>
+    <div class="modal exp-modal">
+      <button class="modal-close" id="expClose">×</button>
+      <h3><span class="m-emoji">👩‍🏫</span>AI 老师讲一讲</h3>
+      <div class="exp-q" id="expQ"></div>
+      <div class="exp-body" id="expBody"></div>
+      <div class="exp-chat" id="expChat"></div>
+      <div class="exp-ask">
+        <input type="text" id="expAsk" placeholder="还有哪里不懂？直接问老师…" autocomplete="off">
+        <button id="expSend">问老师</button>
+      </div>
+      <div class="exp-foot" id="expFoot">先听讲解，还有疑问就问老师 👆</div>
+    </div>
+  </div>
+
   <footer class="site-foot">本工具为苏教版（江苏教育出版社）教材同步练习辅助，与出版社无隶属关系，仅供学习参考 · 知予数学工作室</footer>
 </div>
 
@@ -80,6 +96,12 @@
 <script src="assets/data/grade4.js"></script>
 <script src="assets/data/grade5.js"></script>
 <script src="assets/data/grade6.js"></script>
+<script src="assets/data/exp_g1.js"></script>
+<script src="assets/data/exp_g2.js"></script>
+<script src="assets/data/exp_g3.js"></script>
+<script src="assets/data/exp_g4.js"></script>
+<script src="assets/data/exp_g5.js"></script>
+<script src="assets/data/exp_g6.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>
