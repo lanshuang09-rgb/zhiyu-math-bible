@@ -191,6 +191,7 @@
   function askAI(){
     var inp=$("#expAsk"), ask=(inp&&inp.value||"").trim();
     if(!ask)return;
+    if(!state.dev){ state.dev="D"+Math.random().toString(36).slice(2,12); save(); }   /* 未同步过学情的设备也要有身份可限频 */
     var chat=$("#expChat"); chat.style.display="block";
     chat.insertAdjacentHTML("beforeend",'<div class="aiq me">'+fmt(ask)+'</div>');
     inp.value="";
