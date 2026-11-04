@@ -204,7 +204,7 @@
         };
         _recog.onend=function(){
           _recogOn=false; btn.classList.remove("rec");
-          $("#expAsk").placeholder="点🎤直接问，不用打字…";
+          $("#expAsk").placeholder="点🎤说答案或提问，不用打字…";
           var v=($("#expAsk").value||"").trim();
           if(v){ askAI._viaVoice=true; askAI(); }   /* 说完自动发送 */
         };
