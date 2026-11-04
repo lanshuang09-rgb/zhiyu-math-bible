@@ -172,11 +172,53 @@
     fb.appendChild(b);
   }
 
-  var _expCtx=null;
+  var _expCtx=null, _expHist=[];   /* _expHist: 多轮对话历史 {role,content} */
+  function speak(text){            /* 语音提问的回答自动朗读；点AI气泡可重听 */
+    try{
+      var synth=window.speechSynthesis; if(!synth)return;
+      synth.cancel();
+      var clean=String(text).replace(/[①②③④⑤⑥⑦⑧✅❌🎉👍💪🌟⭐✨🤔😊🙂👇💡]/g,"");
+      var u=new SpeechSynthesisUtterance(clean);
+      u.lang="zh-CN"; u.rate=1.08;
+      synth.speak(u);
+    }catch(e){}
+  }
+  function stopSpeak(){ try{ if(window.speechSynthesis) window.speechSynthesis.cancel(); }catch(e){} }
+
+  /* —— 语音输入（孩子不用打字，点🎤直接问） —— */
+  var _recog=null, _recogOn=false;
+  function setupVoice(){
+    var btn=$("#expMic"); if(!btn)return;
+    var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){ btn.style.display="none"; return; }   /* 老浏览器自动隐藏，保留打字 */
+    btn.onclick=function(){
+      if(_recogOn){ try{_recog&&_recog.stop();}catch(e){} return; }
+      try{
+        _recog=new SR();
+        _recog.lang="zh-CN"; _recog.interimResults=true; _recog.continuous=false;
+        _recog.onstart=function(){ _recogOn=true; btn.classList.add("rec"); $("#expAsk").placeholder="🎧 正在听…说完稍等一下"; };
+        _recog.onresult=function(e){
+          var txt="";
+          for(var i=0;i<e.results.length;i++) txt+=e.results[i][0].transcript;
+          $("#expAsk").value=txt;
+        };
+        _recog.onend=function(){
+          _recogOn=false; btn.classList.remove("rec");
+          $("#expAsk").placeholder="点🎤直接问，不用打字…";
+          var v=($("#expAsk").value||"").trim();
+          if(v){ askAI._viaVoice=true; askAI(); }   /* 说完自动发送 */
+        };
+        _recog.onerror=function(){ _recogOn=false; btn.classList.remove("rec"); $("#expAsk").placeholder="没听清，再点🎤试一次"; };
+        _recog.start();
+      }catch(e){}
+    };
+  }
+
   function openExplain(q,ctx){
     var m=$("#expModal"); if(!m)return;
-    cancelAuto();
+    cancelAuto(); stopSpeak();
     _expCtx=Object.assign({q:q},ctx||{});
+    _expHist=[];
     m.hidden=false;
     $("#expQ").innerHTML='<div class="exp-q-text">'+fmt(q.q||"")+'</div>'+
       (q.key?'<div class="exp-q-key">✅ 正确答案：'+fmt(String(q.key))+'</div>':'');
@@ -192,14 +234,15 @@
     var inp=$("#expAsk"), ask=(inp&&inp.value||"").trim();
     if(!ask)return;
     if(!state.dev){ state.dev="D"+Math.random().toString(36).slice(2,12); save(); }   /* 未同步过学情的设备也要有身份可限频 */
+    var viaVoice=!!askAI._viaVoice; askAI._viaVoice=false;
     var chat=$("#expChat"); chat.style.display="block";
-    chat.insertAdjacentHTML("beforeend",'<div class="aiq me">'+fmt(ask)+'</div>');
+    chat.insertAdjacentHTML("beforeend",'<div class="aiq me">'+fmt(ask)+(viaVoice?'<span class="aiq-via">🎤</span>':'')+'</div>');
     inp.value="";
     chat.insertAdjacentHTML("beforeend",'<div class="aiq ai thinking" id="aiThinking">🧠 老师正在想…</div>');
     chat.scrollTop=chat.scrollHeight;
     var q=(_expCtx&&_expCtx.q)||{};
-    var payload={q:q.q||"",key:String(q.key||""),a:q.a||"",exp:expOf(q),ask:ask,
-      grade:(_expCtx&&_expCtx.grade)||null,unit:(_expCtx&&_expCtx.u&&_expCtx.u.id)||(_expCtx&&_expCtx.unit)||"",
+    var payload={q:q.q||"",key:String(q.key||""),a:q.a||"",exp:expOf(q),ask:ask,hist:_expHist.slice(),
+      grade:(_expCtx&&_expCtx.grade)||null,unit:(_expCtx&&_expCtx.u&&_expCtx.u.title)||(_expCtx&&_expCtx.unit)||"",
       userAns:(_expCtx&&_expCtx.userAns)||"",
       card:(state.activeCard&&state.activeCard!=="@master")?state.activeCard:null,dev:state.dev};
     fetch((CONFIG.apiBase||"").replace(/\/$/,"")+"/api/ai/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
@@ -207,12 +250,14 @@
       .then(function(d){
         var el=$("#aiThinking");
         var ans=(d&&d.ok)?String(d.answer||""):"😥 "+((d&&(d.reason||d.msg))||"AI老师这会儿不在，先看上面的讲解，也可以把问题带给爸爸妈妈～");
-        if(el){el.className="aiq ai";el.innerHTML=fmt(ans);}else{chat.insertAdjacentHTML("beforeend",'<div class="aiq ai">'+fmt(ans)+'</div>');}
+        if(d&&d.ok){ _expHist.push({role:"user",content:ask}); _expHist.push({role:"assistant",content:ans}); if(_expHist.length>16)_expHist=_expHist.slice(-16); }
+        if(el){el.className="aiq ai";el.id="";typeOut(el,ans);}else{chat.insertAdjacentHTML("beforeend",'<div class="aiq ai">'+fmt(ans)+'</div>');}
         chat.scrollTop=chat.scrollHeight;
+        if(viaVoice&&d&&d.ok) setTimeout(function(){speak(ans);},400);   /* 语音问的，回答直接读出来 */
       })
       .catch(function(){
         var el=$("#aiThinking");
-        if(el){el.className="aiq ai";el.innerHTML="😥 网络开小差了，稍后再试～";}
+        if(el){el.className="aiq ai";el.id="";el.innerHTML="😥 网络开小差了，稍后再试～";}
       });
   }
 
@@ -1017,9 +1062,15 @@
   $("#btnWrong").onclick=function(){openWrongbook();};
   $("#btnReport").onclick=function(){openReport();};
   $("#infoClose").onclick=function(){$("#infoModal").hidden=true;};
-  $("#expClose").onclick=function(){ $("#expModal").hidden=true; resumeAuto(); };
+  $("#expClose").onclick=function(){ stopSpeak(); if(_recogOn){try{_recog.stop();}catch(e){}} $("#expModal").hidden=true; resumeAuto(); };
   $("#expSend").onclick=function(){ askAI(); };
   var _expInp=$("#expAsk"); if(_expInp)_expInp.onkeydown=function(e){if(e.key==="Enter")askAI();};
+  var _expChatEl=$("#expChat");
+  if(_expChatEl)_expChatEl.onclick=function(e){   /* 点AI气泡重新朗读 */
+    var b=e.target; while(b&&b!==_expChatEl&&!(b.classList&&b.classList.contains("aiq")))b=b.parentNode;
+    if(b&&b.classList&&b.classList.contains("ai")&&!b.classList.contains("thinking")) speak(b.textContent);
+  };
+  setupVoice();
 
   /* 顶栏 / 横幅 / toast */
   function updateTop(stars,rank,streak){ $("#streakNum").textContent=streak; $("#rankBadge").textContent=rank; }
